@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-11-21: v0.2.0, geser komponen, kabel bercabang, sumber AC (Claude)
+**Dilakukan** (file: `index.html`)
+- Geser komponen: ketuk lalu seret komponen dengan alat Pilih. Ujung kabel yang menempel di terminalnya ikut berpindah.
+- Kabel bercabang (sambungan T): ujung kabel atau terminal komponen yang jatuh di tengah kabel lain otomatis memecah kabel itu dan tersambung. Titik sambungan (3 jalur atau lebih) digambar sebagai titik hijau.
+- Sumber AC sinus: amplitudo lewat selector/ketik bebas, frekuensi lewat selector (1 Hz sampai 1 kHz). Memakai cabang tegangan MNA yang sama dengan baterai.
+- Osiloskop mini kini mengambil 10 sampel per frame agar gelombang AC terlihat mulus.
+
+**Catatan**
+- Belum diuji langsung di browser oleh Claude, hanya ditulis dan dipublikasikan.
+- Menggeser komponen mereset waktu simulasi (rangkaian dibangun ulang).
+- Kabel yang bersilangan tanpa ujung di titik silang tetap TIDAK tersambung (sengaja).
+
+---
+
 ## 2026-11-21: upload awal ke GitHub (Claude)
 **Dilakukan**
 - Membuat repo `GetSimulated` (public) dan mengunggah `index.html`, `README.md`, `LOG.md`.
@@ -28,5 +42,4 @@
 - Membuat `README.md` dan `LOG.md` ini.
 
 **Keterbatasan diketahui**
-- Kabel hanya terhubung di ujungnya (belum ada sambungan T di tengah kabel).
-- Belum ada pemindahan komponen (drag), undo, simpan/muat, sumber AC, transistor, mikrokontroler.
+- Belum ada undo, simpan/muat, transistor, mikrokontroler.

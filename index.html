@@ -26,6 +26,7 @@ button{white-space:nowrap;cursor:pointer}button.on{background:var(--ac);color:#f
 const G=24,$=s=>document.querySelector(s),cv=$('#cv'),cx=cv.getContext('2d'),sc=$('#sc'),sx=sc.getContext('2d');
 const D=[[1,0],[0,1],[-1,0],[0,-1]];
 const T={V:{n:'Baterai',u:'V',v:9,p:[1.5,3,3.3,5,9,12]},
+A:{n:'Sumber AC',u:'V',v:5,p:[1,3,5,9,12],f:50,fp:[1,10,50,60,100,500,1000]},
 R:{n:'Resistor',u:'Ω',v:330,p:[10,100,220,330,470,1e3,2200,4700,1e4,1e5,1e6]},
 C:{n:'Kapasitor',u:'F',v:1e-5,p:[1e-7,1e-6,1e-5,1e-4,4.7e-4,1e-3]},
 L:{n:'Induktor',u:'H',v:.01,p:[1e-3,.01,.1,1]},
@@ -40,6 +41,7 @@ return+m[1]*({p:1e-12,n:1e-9,u:1e-6,'µ':1e-6,m:1e-3,k:1e3,K:1e3,M:1e6,G:1e9}[m[
 const term=c=>{const a=[c.x,c.y],d=D[c.r];return[a,c.t=='G'?a:[c.x+d[0]*3,c.y+d[1]*3]]};
 const K=p=>p[0]+','+p[1];
 function build(){
+ S.comps.forEach(c=>term(c).forEach(splitAt));S.wires.slice().forEach(w=>w.forEach(splitAt));
  const par={},f=k=>par[k]===k?k:(par[k]=f(par[k])),add=k=>{if(!(k in par))par[k]=k};
  S.comps.forEach(c=>term(c).forEach(p=>add(K(p))));
  S.wires.forEach(w=>{add(K(w[0]));add(K(w[1]));par[f(K(w[0]))]=f(K(w[1]))});
@@ -48,7 +50,7 @@ function build(){
  const gr=f(K(term(gc)[0])),idx={};let n=0,m=0;
  for(const k of Object.keys(par)){const r=f(k);if(!(r in idx))idx[r]=r===gr?-1:n++}
  const nd=p=>idx[f(K(p))];
- net={n,els:S.comps.filter(c=>c.t!='G').map(c=>{const[a,b]=term(c),e={c,a:nd(a),b:nd(b)};if(c.t=='V')e.k=m++;return e})};
+ net={n,els:S.comps.filter(c=>c.t!='G').map(c=>{const[a,b]=term(c),e={c,a:nd(a),b:nd(b)};if(c.t=='V'||c.t=='A')e.k=m++;return e})};
  net.els.forEach(e=>{if(e.k!=null)e.k+=n});net.N=n+m;
 }
 function gauss(A,N){
@@ -71,7 +73,7 @@ function step(){
    else if(c.t=='C'){const y=c.val/dt;g(a,b,y);cs(a,b,-y*c.v)}
    else if(c.t=='L'){g(a,b,dt/c.val);cs(a,b,c.i)}
    else if(c.t=='D'){const Is=isat(c),ex=Math.exp(c.vd/NV),gd=Is*ex/NV+1e-12;g(a,b,gd);cs(a,b,Is*(ex-1)-gd*c.vd)}
-   else{const k=e.k;if(b>=0){A[b][k]-=1;A[k][b]+=1}if(a>=0){A[a][k]+=1;A[k][a]-=1}A[k][k]-=.01;A[k][N]=c.val}}
+   else{const k=e.k;if(b>=0){A[b][k]-=1;A[k][b]+=1}if(a>=0){A[a][k]+=1;A[k][a]-=1}A[k][k]-=.01;A[k][N]=c.t=='A'?c.val*Math.sin(6.283185*c.f*(S.t+dt)):c.val}}
   x=gauss(A,N);let conv=true;
   for(const e of els)if(e.c.t=='D'){const c=e.c,v=(e.a>=0?x[e.a]:0)-(e.b>=0?x[e.b]:0);
    if(Math.abs(v-c.vd)>1e-6)conv=false;c.vd+=Math.max(-.5,Math.min(.1,v-c.vd))}
@@ -89,14 +91,19 @@ const hit=(px,py)=>S.comps.find(c=>{const[a,b]=term(c);return dseg(px,py,a[0]*G,
 function setTool(t){S.tool=t;S.ws=null;ui()}
 cv.addEventListener('pointerdown',e=>{
  const r=cv.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top,gx=Math.round(px/G),gy=Math.round(py/G),t=S.tool;
- if(t=='sel'){S.sel=hit(px,py)||null;S.hist=[]}
+ if(t=='sel'){const c=hit(px,py)||null;if(c!==S.sel)S.hist=[];S.sel=c;if(c){const T0=term(c);S.drag={c,o:[gx-c.x,gy-c.y],ep:[...new Set(S.wires.flat().filter(p=>T0.some(q=>q[0]==p[0]&&q[1]==p[1])))]}}}
  else if(t=='del'){const c=hit(px,py);
   if(c){S.comps.splice(S.comps.indexOf(c),1);if(S.sel===c)S.sel=null}
   else{const w=S.wires.findIndex(w=>dseg(px,py,w[0][0]*G,w[0][1]*G,w[1][0]*G,w[1][1]*G)<8);if(w>=0)S.wires.splice(w,1)}build()}
  else if(t=='wire'){if(!S.ws)S.ws=[gx,gy];else{const a=S.ws;
   if(a[0]!=gx||a[1]!=gy){if(a[0]!=gx&&a[1]!=gy){const m=[gx,a[1]];S.wires.push([a,m],[m,[gx,gy]])}else S.wires.push([a,[gx,gy]]);build()}S.ws=null}}
- else{const c={t,x:gx,y:gy,r:S.rot,val:T[t].v,on:false};S.comps.push(c);S.sel=c;S.hist=[];build()}
+ else{const c={t,x:gx,y:gy,r:S.rot,val:T[t].v,f:T[t].f,on:false};S.comps.push(c);S.sel=c;S.hist=[];build()}
  ui()});
+function splitAt(p){for(let i=0;i<S.wires.length;i++){const[a,b]=S.wires[i];if(K(p)==K(a)||K(p)==K(b))continue;
+ const cr=(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+ if(cr==0&&p[0]>=Math.min(a[0],b[0])&&p[0]<=Math.max(a[0],b[0])&&p[1]>=Math.min(a[1],b[1])&&p[1]<=Math.max(a[1],b[1])){S.wires.splice(i,1,[a,[p[0],p[1]]],[[p[0],p[1]],b]);i++}}}
+cv.addEventListener('pointermove',e=>{const d=S.drag;if(!d)return;const r=cv.getBoundingClientRect(),nx=Math.round((e.clientX-r.left)/G)-d.o[0],ny=Math.round((e.clientY-r.top)/G)-d.o[1],dx=nx-d.c.x,dy=ny-d.c.y;if(!dx&&!dy)return;d.ep.forEach(p=>{p[0]+=dx;p[1]+=dy});d.c.x=nx;d.c.y=ny;build()});
+addEventListener('pointerup',()=>S.drag=null);
 function rot(){S.rot=(S.rot+1)%4;if(S.sel){S.sel.r=S.rot;build()}ui()}
 addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;if(e.key=='r')rot();if(e.key=='Delete'&&S.sel){S.comps.splice(S.comps.indexOf(S.sel),1);S.sel=null;build();ui()}});
 function ui(){
@@ -107,10 +114,10 @@ function ui(){
  const t=T[c.t];let h=`<b>${t.n}</b> `;
  if(c.t=='S')h+=`<button onclick="S.sel.on=!S.sel.on;ui()">${c.on?'Tertutup (ON)':'Terbuka (OFF)'}</button>`;
  else if(c.t!='G'){const m=t.p.includes(c.val);
-  h+=`<select id="sv">${t.p.map((v,i)=>`<option value="${v}" ${v==c.val?'selected':''}>${t.nm?t.nm[i]+' ':''}${fmt(v,t.u)}</option>`).join('')}<option value="x" ${m?'':'selected'}>Kustom</option></select> <input id="iv" value="${fmt(c.val,'')}" size="7"> ${t.u}`}
+  h+=`<select id="sv">${t.p.map((v,i)=>`<option value="${v}" ${v==c.val?'selected':''}>${t.nm?t.nm[i]+' ':''}${fmt(v,t.u)}</option>`).join('')}<option value="x" ${m?'':'selected'}>Kustom</option></select> <input id="iv" value="${fmt(c.val,'')}" size="7"> ${t.u}`;if(c.t=='A')h+=` f: <select id="fv">${t.fp.map(v=>`<option value="${v}" ${v==c.f?'selected':''}>${fmt(v,'Hz')}</option>`).join('')}</select>`}
  p.innerHTML=h;
  if($('#sv')){$('#sv').onchange=e=>{if(e.target.value!='x'){c.val=+e.target.value;ui()}else $('#iv').focus()};
-  $('#iv').onchange=e=>{const v=parse(e.target.value);if(v>0)c.val=v;ui()}}}
+  $('#iv').onchange=e=>{const v=parse(e.target.value);if(v>0)c.val=v;ui()};if($('#fv'))$('#fv').onchange=e=>{c.f=+e.target.value;ui()}}}
 $('#run').onclick=()=>{S.run=!S.run;ui()};$('#dt').onchange=e=>S.dt=+e.target.value;
 function fit(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;sc.width=sc.clientWidth;sc.height=sc.clientHeight}
 addEventListener('resize',fit);
@@ -131,20 +138,22 @@ function draw(){
   else if(c.t=='C'){cx.moveTo(0,0);cx.lineTo(m-3,0);cx.moveTo(m-3,-12);cx.lineTo(m-3,12);cx.moveTo(m+3,-12);cx.lineTo(m+3,12);cx.moveTo(m+3,0);cx.lineTo(L,0)}
   else if(c.t=='L'){cx.moveTo(0,0);cx.lineTo(14,0);for(let i=0;i<4;i++)cx.arc(20+i*12,0,6,Math.PI,0);cx.lineTo(L,0)}
   else if(c.t=='V'){cx.moveTo(0,0);cx.lineTo(m-4,0);cx.moveTo(m-4,-7);cx.lineTo(m-4,7);cx.moveTo(m+4,-14);cx.lineTo(m+4,14);cx.moveTo(m+4,0);cx.lineTo(L,0)}
+  else if(c.t=='A'){cx.moveTo(0,0);cx.lineTo(m-13,0);cx.moveTo(m+13,0);cx.arc(m,0,13,0,7);cx.moveTo(m-8,0);for(let i=-8;i<=8;i++)cx.lineTo(m+i,-6*Math.sin(i/8*Math.PI));cx.moveTo(m+13,0);cx.lineTo(L,0)}
   else if(c.t=='D'){const a=Math.min(1,Math.max(0,c.i)/.015);
    if(a>.02){cx.fillStyle=`rgba(${LED(c)},${a*.8})`;cx.beginPath();cx.arc(m,0,24,0,7);cx.fill();cx.fillStyle=col;cx.beginPath()}
    cx.moveTo(0,0);cx.lineTo(G,0);cx.moveTo(G,-10);cx.lineTo(G,10);cx.lineTo(2*G,0);cx.closePath();cx.moveTo(2*G,-10);cx.lineTo(2*G,10);cx.moveTo(2*G,0);cx.lineTo(L,0)}
   else if(c.t=='S'){cx.moveTo(0,0);cx.lineTo(G,0);cx.moveTo(2*G,0);cx.lineTo(L,0);cx.moveTo(G,0);cx.lineTo(c.on?2*G:2*G-4,c.on?0:-14)}
   cx.stroke();
-  if(c.t=='V'){cx.fillText('+',L-10,-8);cx.fillText('−',4,-8)}
+  if(c.t=='V'||c.t=='A'){cx.fillText('+',L-10,-8);cx.fillText('−',4,-8)}
   cx.restore();
   if(c.t=='G')continue;
   const d=D[c.r],mx=(c.x+d[0]*1.5)*G,my=(c.y+d[1]*1.5)*G,hz=d[1]==0;
-  const l1=c.t=='S'?(c.on?'ON':'OFF'):fmt(c.val,T[c.t].u),l2=fmt(c.v,'V')+' '+fmt(c.i,'A');
+  const l1=c.t=='S'?(c.on?'ON':'OFF'):fmt(c.val,T[c.t].u)+(c.t=='A'?' '+fmt(c.f,'Hz'):''),l2=fmt(c.v,'V')+' '+fmt(c.i,'A');
   cx.fillStyle=col;cx.textAlign=hz?'center':'left';
   cx.fillText(l1,hz?mx:mx+14,hz?my-18:my-3);cx.fillStyle=ac;cx.fillText(l2,hz?mx:mx+14,hz?my+26:my+11)}
  cx.fillStyle=ac;
  for(const c of S.comps)for(const p of term(c)){cx.beginPath();cx.arc(p[0]*G,p[1]*G,3.5,0,7);cx.fill()}
+ const cn={};S.wires.forEach(w=>w.forEach(p=>cn[K(p)]=(cn[K(p)]||0)+1));S.comps.forEach(c=>term(c).forEach(p=>cn[K(p)]=(cn[K(p)]||0)+1));cx.fillStyle=wr;for(const k in cn)if(cn[k]>2){const[x,y]=k.split(',');cx.beginPath();cx.arc(x*G,y*G,5,0,7);cx.fill()}
  sx.clearRect(0,0,sc.width,sc.height);
  if(S.sel&&S.hist.length>1){const h=S.hist,mn=Math.min(...h),mx=Math.max(...h,mn+1e-9),W=sc.width,H=sc.height;
   sx.strokeStyle=ac;sx.lineWidth=2;sx.beginPath();
@@ -152,8 +161,7 @@ function draw(){
   sx.fillStyle=fg;sx.font='11px system-ui';sx.fillText('Tegangan '+T[S.sel.t].n+': '+fmt(mn,'V')+' … '+fmt(mx,'V'),6,12)}
 }
 function loop(){
- if(S.run&&net)for(let i=0;i<50;i++)step();
- if(S.run&&net&&S.sel){S.hist.push(S.sel.v);if(S.hist.length>300)S.hist.shift()}
+ if(S.run&&net)for(let i=0;i<50;i++){step();if(i%5==0&&S.sel){S.hist.push(S.sel.v);if(S.hist.length>300)S.hist.shift()}}
  let msg=!net?'Tambahkan komponen GND agar simulasi berjalan.':'t = '+fmt(S.t,'s')+(S.run?'':' (dijeda)');
  if(net&&S.comps.some(c=>c.t=='D'&&c.i>.03))msg+=' ⚠ LED kelebihan arus, tambahkan resistor!';
  $('#st').textContent=msg;draw();requestAnimationFrame(loop)}
