@@ -1,30 +1,43 @@
 <!DOCTYPE html>
-<html lang="id"><head><meta charset="utf-8"><title>CircuitSim</title>
+<html lang="id"><head><meta charset="utf-8"><title>GetSimulated</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
-:root{--bg:#f6f7f9;--fg:#1d2330;--pn:#fff;--ln:#d5d9e0;--ac:#2563eb;--wr:#0a7d3c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151c;--fg:#e6e9ef;--pn:#1c212b;--ln:#363d4b;--ac:#6ea0ff;--wr:#4ade80;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#12151c;--fg:#e6e9ef;--pn:#1c212b;--ln:#363d4b;--ac:#6ea0ff;--wr:#4ade80;color-scheme:dark}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
-body{padding:8px;max-width:1000px;margin:auto}
-.bar{display:flex;gap:6px;overflow-x:auto;padding:4px 0;flex-wrap:nowrap}
-button,select,input{font:inherit;color:var(--fg);background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:6px 10px}
-button{white-space:nowrap;cursor:pointer}button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
-#cv{width:100%;height:54vh;background:var(--pn);border:1px solid var(--ln);border-radius:10px;touch-action:none;display:block}
-#sc{width:100%;height:70px;background:var(--pn);border:1px solid var(--ln);border-radius:10px;display:block}
-#pn,#st{margin:6px 0;padding:8px;background:var(--pn);border:1px solid var(--ln);border-radius:10px}
-.mt{opacity:.65}
+:root{--bg:#eef1f6;--fg:#182033;--mu:#6b7690;--pn:#fff;--ln:#dde2ec;--ac:#2f6df6;--wr:#0f9d58;--cv:#fbfcfe;--dot:#cdd5e4;--wn:#fff4d6;--wf:#7a5200;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1118;--fg:#e8ecf5;--mu:#8e98b0;--pn:#171c27;--ln:#2a3142;--ac:#6b9cff;--wr:#3ddc84;--cv:#121722;--dot:#2b3347;--wn:#3a2f10;--wf:#f2cf7a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1118;--fg:#e8ecf5;--mu:#8e98b0;--pn:#171c27;--ln:#2a3142;--ac:#6b9cff;--wr:#3ddc84;--cv:#121722;--dot:#2b3347;--wn:#3a2f10;--wf:#f2cf7a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,-apple-system,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--pn);border-bottom:1px solid var(--ln)}
+.lg{display:flex;align-items:center;gap:8px}.lg b{font-size:16px}.lg small{color:var(--mu);display:none}
+.hr{display:flex;gap:6px;align-items:center}
+button,select,input{font:inherit;color:var(--fg);background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:7px 11px;min-height:36px}
+button{cursor:pointer;white-space:nowrap}button:hover{border-color:var(--ac)}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.pri{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600}
+main{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px;max-width:1500px;margin:auto}
+#tb{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+#tb h6{display:none;margin:8px 4px 2px;color:var(--mu);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+#tb button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;min-width:64px;padding:6px}
+.cvw{position:relative;background:var(--cv);border:1px solid var(--ln);border-radius:14px;overflow:hidden}
+#cv{width:100%;height:54vh;display:block;touch-action:none}
+.zm{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}.zm button{width:36px;padding:0}
+#st{position:absolute;left:10px;top:10px;padding:5px 10px;border-radius:999px;background:var(--pn);border:1px solid var(--ln);font-size:12px;max-width:80%}
+#st.w{background:var(--wn);color:var(--wf);border-color:#e8c36a}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:12px;margin-bottom:10px}
+.ct{display:flex;align-items:center;gap:8px;margin-bottom:8px}.mu{color:var(--mu);margin:6px 0 0}
+.rd{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.rd div{background:var(--bg);border-radius:10px;padding:6px 8px}.rd small{display:block;color:var(--mu);font-size:11px}.rd b{font-size:13px}
+.ar,.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.row{margin-bottom:6px}
+#sc{width:100%;height:90px;display:block}
+@media(min-width:860px){main{grid-template-columns:176px minmax(0,1fr) 300px;align-items:start}#tb{flex-direction:column;overflow:visible}#tb h6{display:block}#tb button{flex-direction:row;font-size:13px;gap:8px;min-width:0;justify-content:flex-start}#cv{height:calc(100vh - 100px);min-height:460px}.lg small{display:inline}}
 </style></head><body>
-<div class="bar" id="tb"></div>
-<canvas id="cv"></canvas>
-<div id="pn"></div>
-<canvas id="sc"></canvas>
-<div class="bar"><button id="run"></button><button onclick="build()">Reset</button><button onclick="undo()">Undo</button><button onclick="save()">Simpan</button><button onclick="load()">Muat</button>
-<select id="dt"><option value="1e-5">Lambat (10µs)</option><option value="1e-4" selected>Normal (100µs)</option><option value="1e-3">Cepat (1ms)</option></select></div>
-<div id="st" class="mt"></div>
+<header><div class="lg"><svg width="28" height="28" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2f6df6"/><path d="M3 13h4l2-5 3 9 2-6 1 2h6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><b>GetSimulated</b><small>Simulator elektronik</small></div>
+<div class="hr"><select id="ex"></select><button id="th" title="Tema">◐</button><button id="run" class="pri"></button></div></header>
+<main><aside id="tb"></aside>
+<section class="cvw"><canvas id="cv"></canvas><div id="st"></div><div class="zm"><button onclick="zoom(1.2)">+</button><button onclick="zoom(.83)">−</button><button onclick="V.z=1;V.x=V.y=0" title="Reset tampilan">⌂</button></div></section>
+<aside><div id="pn"></div><div class="card"><b>Osiloskop</b><canvas id="sc"></canvas></div></aside></main>
 <script>
-const G=24,$=s=>document.querySelector(s),cv=$('#cv'),cx=cv.getContext('2d'),sc=$('#sc'),sx=sc.getContext('2d');
-const D=[[1,0],[0,1],[-1,0],[0,-1]];
+let G=24;const $=s=>document.querySelector(s),cv=$('#cv'),cx=cv.getContext('2d'),sc=$('#sc'),sx=sc.getContext('2d');
+const DPR=Math.min(devicePixelRatio||1,2),V={z:1,x:0,y:0},D=[[1,0],[0,1],[-1,0],[0,-1]];
 const T={V:{n:'Baterai',u:'V',v:9,p:[1.5,3,3.3,5,9,12]},
 A:{n:'Sumber AC',u:'V',v:5,p:[1,3,5,9,12],f:50,fp:[1,10,50,60,100,500,1000]},
 R:{n:'Resistor',u:'Ω',v:330,p:[10,100,220,330,470,1e3,2200,4700,1e4,1e5,1e6]},
@@ -33,7 +46,13 @@ L:{n:'Induktor',u:'H',v:.01,p:[1e-3,.01,.1,1]},
 D:{n:'LED',u:'V',v:1.8,p:[1.8,2,2.1,3],nm:['Merah','Kuning','Hijau','Biru']},
 J:{n:'Dioda',u:'V',v:.72,p:[.72,.68,.3,.4],nm:['1N4148','1N4007','1N5819','BAT54']},
 S:{n:'Saklar'},G:{n:'GND'}};
-const S={comps:[],wires:[],tool:'sel',sel:null,rot:0,run:true,t:0,ws:null,dt:1e-4,hist:[]};
+const TC={V:'#e5484d',A:'#e5484d',R:'#d98a00',C:'#2f80ed',L:'#8e5cf0',D:'#17a05d',J:'#e0762e',S:'#7b8798',G:'#7b8798'};
+const IC={sel:'M5 3l12 8-5 1-3 5z',wire:'M4 18h8V6h8',del:'M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13',V:'M2 12h8M10 6v12M14 9v6M14 12h8',A:'M2 12h4M18 12h4M6 12a6 6 0 1 0 12 0a6 6 0 1 0-12 0M8 12q2-4 4 0t4 0',R:'M2 12h4l2-5 3 10 3-10 3 10 2-5h3',C:'M2 12h8M10 5v14M14 5v14M14 12h8',L:'M2 12h3c0-5 5-5 5 0c0-5 5-5 5 0c0-5 5-5 5 0h-1',D:'M2 12h6M8 6v12l8-6zM16 6v12M16 12h6M18 4l3-2M20 8l3-2',J:'M2 12h6M8 6v12l8-6zM16 6v12M16 12h6',S:'M2 12h6M16 12h6M8 12l8-6',G:'M12 4v8M5 12h14M8 16h8M10 20h4'};
+const ico=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${TC[k]||'currentColor'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg>`;
+const EX=[['LED + resistor',[['V',4,9,3],['R',4,6,0],['D',7,6,1],['G',4,9,0]],[[[7,9],[4,9]]]],
+['Pengisian kapasitor (RC)',[['V',4,9,3,9],['S',4,6,0],['R',7,6,0,1000],['C',10,6,1,1e-4],['G',4,9,0]],[[[10,9],[4,9]]]],
+['Penyearah setengah gelombang',[['A',4,9,3,5],['J',4,6,0],['R',7,6,1,1000],['C',10,6,1,1e-5],['G',4,9,0]],[[[7,6],[10,6]],[[10,9],[7,9]],[[7,9],[4,9]]]]];
+const S={comps:[],wires:[],tool:'sel',sel:null,rot:0,run:true,t:0,ws:null,dt:1e-4,hist:[],U:[]};
 let net=null;
 function fmt(x,u){if(x==null||isNaN(x))return'';const a=Math.abs(x);if(a<1e-15)return'0'+u;
 for(const[s,p]of[[1e9,'G'],[1e6,'M'],[1e3,'k'],[1,''],[1e-3,'m'],[1e-6,'µ'],[1e-9,'n'],[1e-12,'p']])if(a>=s*.9999)return+(x/s).toPrecision(3)+p+u;return x.toExponential(1)+u}
@@ -41,6 +60,7 @@ function parse(s){const m=String(s).trim().match(/^([\d.]+(?:e[-+]?\d+)?)\s*([pn
 return+m[1]*({p:1e-12,n:1e-9,u:1e-6,'µ':1e-6,m:1e-3,k:1e3,K:1e3,M:1e6,G:1e9}[m[2]]||1)}
 const term=c=>{const a=[c.x,c.y],d=D[c.r];return[a,c.t=='G'?a:[c.x+d[0]*3,c.y+d[1]*3]]};
 const K=p=>p[0]+','+p[1];
+function onSeg(p,a,b){return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])==0&&p[0]>=Math.min(a[0],b[0])&&p[0]<=Math.max(a[0],b[0])&&p[1]>=Math.min(a[1],b[1])&&p[1]<=Math.max(a[1],b[1])}
 function build(){
  const par={},f=k=>par[k]===k?k:(par[k]=f(par[k])),add=k=>{if(!(k in par))par[k]=k};
  S.comps.forEach(c=>term(c).forEach(p=>add(K(p))));
@@ -89,54 +109,73 @@ function step(){
  S.t+=dt}
 const dseg=(px,py,x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/l)):0;return Math.hypot(px-x1-t*dx,py-y1-t*dy)};
 const hit=(px,py)=>S.comps.find(c=>{const[a,b]=term(c);return dseg(px,py,a[0]*G,a[1]*G,b[0]*G,b[1]*G)<(c.t=='G'?16:12)});
+const wp=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left-V.x)/V.z,(e.clientY-r.top-V.y)/V.z]};
+function zoom(k,X,Y){const r=cv.getBoundingClientRect(),px=X==null?r.width/2:X-r.left,py=Y==null?r.height/2:Y-r.top,nz=Math.max(.5,Math.min(2.5,V.z*k)),f=nz/V.z;V.x=px-(px-V.x)*f;V.y=py-(py-V.y)*f;V.z=nz}
+cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.1:.9,e.clientX,e.clientY)},{passive:false});
 function setTool(t){S.tool=t;S.ws=null;ui()}
 cv.addEventListener('pointerdown',e=>{
- const r=cv.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top,gx=Math.round(px/G),gy=Math.round(py/G),t=S.tool;
- if(t=='sel'){const c=hit(px,py)||null;if(c!==S.sel)S.hist=[];S.sel=c;if(c){const T0=term(c);S.drag={c,o:[gx-c.x,gy-c.y],ep:[...new Set(S.wires.flat().filter(p=>T0.some(q=>q[0]==p[0]&&q[1]==p[1])))]}}}
+ const[px,py]=wp(e),gx=Math.round(px/G),gy=Math.round(py/G),t=S.tool;
+ if(t=='sel'){const c=hit(px,py)||null;if(c!==S.sel)S.hist=[];S.sel=c;
+  if(c){const T0=term(c);S.drag={c,o:[gx-c.x,gy-c.y],ep:[...new Set(S.wires.flat().filter(p=>T0.some(q=>q[0]==p[0]&&q[1]==p[1])))]}}
+  else S.pan={x:e.clientX,y:e.clientY,vx:V.x,vy:V.y}}
  else if(t=='del'){snap();const c=hit(px,py);
   if(c){S.comps.splice(S.comps.indexOf(c),1);if(S.sel===c)S.sel=null}
   else{const w=S.wires.findIndex(w=>dseg(px,py,w[0][0]*G,w[0][1]*G,w[1][0]*G,w[1][1]*G)<8);if(w>=0)S.wires.splice(w,1)}build()}
  else if(t=='wire'){if(!S.ws)S.ws=[gx,gy];else{const a=S.ws;
   if(a[0]!=gx||a[1]!=gy){snap();if(a[0]!=gx&&a[1]!=gy){const m=[gx,a[1]];S.wires.push([a,m],[m,[gx,gy]])}else S.wires.push([a,[gx,gy]]);build()}S.ws=null}}
- else{snap();const c={t,x:gx,y:gy,r:S.rot,val:T[t].v,f:T[t].f,on:false};S.comps.push(c);S.sel=c;S.hist=[];build()}
+ else{snap();const c={t,x:gx,y:gy,r:S.rot,val:T[t].v,f:T[t].f,on:true};S.comps.push(c);S.sel=c;S.hist=[];build()}
  ui()});
-function onSeg(p,a,b){return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])==0&&p[0]>=Math.min(a[0],b[0])&&p[0]<=Math.max(a[0],b[0])&&p[1]>=Math.min(a[1],b[1])&&p[1]<=Math.max(a[1],b[1])}
-cv.addEventListener('pointermove',e=>{const d=S.drag;if(!d)return;const r=cv.getBoundingClientRect(),nx=Math.round((e.clientX-r.left)/G)-d.o[0],ny=Math.round((e.clientY-r.top)/G)-d.o[1],dx=nx-d.c.x,dy=ny-d.c.y;if(!dx&&!dy)return;if(!d.s){d.s=1;snap()}d.ep.forEach(p=>{p[0]+=dx;p[1]+=dy});d.c.x=nx;d.c.y=ny;build()});
-addEventListener('pointerup',()=>S.drag=null);
-S.U=[];const snap=()=>{S.U.push(JSON.stringify({c:S.comps,w:S.wires}));if(S.U.length>50)S.U.shift()};
+addEventListener('pointermove',e=>{
+ if(S.pan){V.x=S.pan.vx+e.clientX-S.pan.x;V.y=S.pan.vy+e.clientY-S.pan.y;return}
+ const d=S.drag;if(!d)return;const[px,py]=wp(e),nx=Math.round(px/G)-d.o[0],ny=Math.round(py/G)-d.o[1],dx=nx-d.c.x,dy=ny-d.c.y;
+ if(!dx&&!dy)return;if(!d.s){d.s=1;snap()}d.ep.forEach(p=>{p[0]+=dx;p[1]+=dy});d.c.x=nx;d.c.y=ny;build()});
+addEventListener('pointerup',()=>{S.drag=S.pan=null});
+const snap=()=>{S.U.push(JSON.stringify({c:S.comps,w:S.wires}));if(S.U.length>50)S.U.shift()};
 const note=t=>{S.note=t;setTimeout(()=>S.note='',2500)};
 function restore(j){const o=JSON.parse(j);S.comps=o.c;S.wires=o.w;S.sel=null;S.drag=null;build();ui()}
 function undo(){if(S.U.length)restore(S.U.pop());else note('Tidak ada yang bisa di-undo')}
 function save(){try{localStorage.setItem('getsim',JSON.stringify({c:S.comps,w:S.wires}));note('Tersimpan')}catch(e){note('Gagal menyimpan')}}
 function load(){try{const j=localStorage.getItem('getsim');if(j){snap();restore(j);note('Dimuat')}else note('Belum ada simpanan')}catch(e){note('Gagal memuat')}}
 function rot(){S.rot=(S.rot+1)%4;if(S.sel){snap();S.sel.r=S.rot;build()}ui()}
-addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;if(e.key=='r')rot();if((e.ctrlKey||e.metaKey)&&e.key=='z')undo();if(e.key=='Delete'&&S.sel){S.comps.splice(S.comps.indexOf(S.sel),1);S.sel=null;build();ui()}});
+function del(){if(!S.sel)return;snap();S.comps.splice(S.comps.indexOf(S.sel),1);S.sel=null;build();ui()}
+function exm(i){snap();S.comps=[];S.wires=[];EX[i][1].forEach(([t,x,y,r,v,f])=>S.comps.push({t,x,y,r,val:v??T[t].v,f:f??T[t].f,on:true,v:0,i:0,vd:0}));EX[i][2].forEach(w=>S.wires.push(w));S.sel=null;V.z=1;V.x=V.y=0;build();ui()}
+addEventListener('keydown',e=>{if(e.target.tagName=='INPUT'||e.target.tagName=='SELECT')return;if(e.key=='r')rot();if((e.ctrlKey||e.metaKey)&&e.key=='z')undo();if(e.key=='Delete'||e.key=='Backspace')del()});
+const bt=(k,i,n,f)=>`<button data-k="${k}" onclick="${f}">${i}<span>${n}</span></button>`;
+$('#tb').innerHTML='<h6>Alat</h6>'+[['sel','Pilih'],['wire','Kabel'],['del','Hapus']].map(([k,n])=>bt(k,ico(k),n,`setTool('${k}')`)).join('')+'<h6>Komponen</h6>'+Object.keys(T).map(k=>bt(k,ico(k),T[k].n,`setTool('${k}')`)).join('')+'<h6>Aksi</h6>'+[['rot()','↻','Putar'],['undo()','↶','Undo'],['save()','⇩','Simpan'],['load()','⇧','Muat'],['build()','⟲','Reset']].map(([f,i,n])=>bt('',`<b>${i}</b>`,n,f)).join('')+'<select id="dt"><option value="1e-5">Lambat (10µs)</option><option value="1e-4" selected>Normal (100µs)</option><option value="1e-3">Cepat (1ms)</option></select>';
+$('#ex').innerHTML='<option value="">Contoh rangkaian…</option>'+EX.map((e,i)=>`<option value="${i}">${e[0]}</option>`).join('');
+$('#ex').onchange=e=>{if(e.target.value!=='')exm(+e.target.value);e.target.value=''};
+$('#dt').onchange=e=>S.dt=+e.target.value;$('#run').onclick=()=>{S.run=!S.run;ui()};
+$('#th').onclick=()=>{const d=document.documentElement;d.dataset.theme=(d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))=='dark'?'light':'dark'};
 function ui(){
- $('#tb').innerHTML=[['sel','Pilih'],['wire','Kabel'],['del','Hapus'],...Object.keys(T).map(k=>[k,T[k].n])].map(([k,n])=>`<button class="${S.tool==k?'on':''}" onclick="setTool('${k}')">${n}</button>`).join('')+'<button onclick="rot()">Putar ↻</button>';
- $('#run').textContent=S.run?'Jeda':'Jalankan';
+ document.querySelectorAll('#tb [data-k]').forEach(b=>b.classList.toggle('on',b.dataset.k==S.tool));
+ $('#run').textContent=S.run?'⏸ Jeda':'▶ Jalankan';
  const c=S.sel,p=$('#pn');
- if(!c){p.innerHTML='<span class="mt">Pilih komponen untuk mengubah nilainya. Letakkan GND agar simulasi jalan. Kabel: ketuk dua titik.</span>';return}
- const t=T[c.t];let h=`<b>${t.n}</b> `;
+ if(!c){p.innerHTML='<div class="card"><b>Mulai</b><p class="mu">Pilih komponen di palet lalu ketuk grid untuk menaruhnya. Pakai Kabel untuk menyambung dua titik. Rangkaian wajib punya GND.</p><p class="mu">Seret komponen untuk memindah, seret area kosong untuk menggeser tampilan. Coba menu Contoh rangkaian di atas.</p></div>';return}
+ const t=T[c.t];let h=`<div class="card"><div class="ct">${ico(c.t)}<b>${t.n}</b></div><div class="row">`;
  if(c.t=='S')h+=`<button onclick="S.sel.on=!S.sel.on;ui()">${c.on?'Tertutup (ON)':'Terbuka (OFF)'}</button>`;
  else if(c.t!='G'){const m=t.p.includes(c.val);
-  h+=`<select id="sv">${t.p.map((v,i)=>`<option value="${v}" ${v==c.val?'selected':''}>${t.nm?t.nm[i]+' ':''}${fmt(v,t.u)}</option>`).join('')}<option value="x" ${m?'':'selected'}>Kustom</option></select> <input id="iv" value="${fmt(c.val,'')}" size="7"> ${t.u}`;if(c.t=='A')h+=` f: <select id="fv">${t.fp.map(v=>`<option value="${v}" ${v==c.f?'selected':''}>${fmt(v,'Hz')}</option>`).join('')}</select>`}
- p.innerHTML=h;
+  h+=`<select id="sv">${t.p.map((v,i)=>`<option value="${v}" ${v==c.val?'selected':''}>${t.nm?t.nm[i]+' ':''}${fmt(v,t.u)}</option>`).join('')}<option value="x" ${m?'':'selected'}>Kustom</option></select><input id="iv" value="${fmt(c.val,'')}" size="6"> ${t.u}`;
+  if(c.t=='A')h+=` f: <select id="fv">${t.fp.map(v=>`<option value="${v}" ${v==c.f?'selected':''}>${fmt(v,'Hz')}</option>`).join('')}</select>`}
+ h+='</div>';
+ if(c.t!='G')h+='<div class="rd"><div><small>Tegangan</small><b id="rv"></b></div><div><small>Arus</small><b id="ri"></b></div><div><small>Daya</small><b id="rp"></b></div></div>';
+ p.innerHTML=h+'<div class="ar"><button onclick="rot()">↻ Putar</button><button onclick="del()">Hapus</button></div></div>';
  if($('#sv')){$('#sv').onchange=e=>{if(e.target.value!='x'){snap();c.val=+e.target.value;ui()}else $('#iv').focus()};
   $('#iv').onchange=e=>{const v=parse(e.target.value);if(v>0){snap();c.val=v}ui()};if($('#fv'))$('#fv').onchange=e=>{c.f=+e.target.value;ui()}}}
-$('#run').onclick=()=>{S.run=!S.run;ui()};$('#dt').onchange=e=>S.dt=+e.target.value;
-function fit(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;sc.width=sc.clientWidth;sc.height=sc.clientHeight}
-addEventListener('resize',fit);
+function fit(){cv.width=cv.clientWidth*DPR;cv.height=cv.clientHeight*DPR;sc.width=sc.clientWidth*DPR;sc.height=sc.clientHeight*DPR}
+new ResizeObserver(fit).observe(cv);new ResizeObserver(fit).observe(sc);
 const LED=c=>c.val>=2.8?'77,163,255':c.val>=2.05?'67,224,107':c.val>=1.95?'255,200,30':'255,59,59';
 function draw(){
- const st=getComputedStyle(document.documentElement),fg=st.getPropertyValue('--fg'),ln=st.getPropertyValue('--ln'),ac=st.getPropertyValue('--ac'),wr=st.getPropertyValue('--wr');
- cx.clearRect(0,0,cv.width,cv.height);cx.fillStyle=ln;
- for(let x=0;x<cv.width;x+=G)for(let y=0;y<cv.height;y+=G)cx.fillRect(x-1,y-1,2,2);
+ const st=getComputedStyle(document.documentElement),fg=st.getPropertyValue('--fg'),mu=st.getPropertyValue('--mu'),dot=st.getPropertyValue('--dot'),ac=st.getPropertyValue('--ac'),wr=st.getPropertyValue('--wr');
+ cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);
+ cx.setTransform(DPR*V.z,0,0,DPR*V.z,DPR*V.x,DPR*V.y);cx.lineCap=cx.lineJoin='round';
+ cx.fillStyle=dot;const W=cv.clientWidth,H=cv.clientHeight;
+ for(let x=Math.floor(-V.x/V.z/G);x<=(W-V.x)/V.z/G;x++)for(let y=Math.floor(-V.y/V.z/G);y<=(H-V.y)/V.z/G;y++)cx.fillRect(x*G-1,y*G-1,2,2);
  cx.strokeStyle=wr;cx.lineWidth=2.5;
  S.wires.forEach(w=>{cx.beginPath();cx.moveTo(w[0][0]*G,w[0][1]*G);cx.lineTo(w[1][0]*G,w[1][1]*G);cx.stroke()});
  if(S.ws){cx.fillStyle=wr;cx.beginPath();cx.arc(S.ws[0]*G,S.ws[1]*G,6,0,7);cx.fill()}
  cx.lineWidth=2;cx.font='11px system-ui';const L=3*G,m=1.5*G;
  for(const c of S.comps){
-  const col=c===S.sel?ac:fg;cx.strokeStyle=cx.fillStyle=col;
+  const col=c===S.sel?ac:TC[c.t];cx.strokeStyle=cx.fillStyle=col;cx.shadowColor=ac;cx.shadowBlur=c===S.sel?10:0;
   cx.save();cx.translate(c.x*G,c.y*G);cx.rotate(c.r*Math.PI/2);cx.beginPath();
   if(c.t=='G'){cx.moveTo(0,0);cx.lineTo(0,10);cx.moveTo(-12,10);cx.lineTo(12,10);cx.moveTo(-8,15);cx.lineTo(8,15);cx.moveTo(-4,20);cx.lineTo(4,20)}
   else if(c.t=='R'){cx.moveTo(0,0);cx.lineTo(G,0);cx.rect(G,-7,G,14);cx.moveTo(2*G,0);cx.lineTo(L,0)}
@@ -148,30 +187,29 @@ function draw(){
    if(a>.02){cx.fillStyle=`rgba(${LED(c)},${a*.8})`;cx.beginPath();cx.arc(m,0,24,0,7);cx.fill();cx.fillStyle=col;cx.beginPath()}
    cx.moveTo(0,0);cx.lineTo(G,0);cx.moveTo(G,-10);cx.lineTo(G,10);cx.lineTo(2*G,0);cx.closePath();cx.moveTo(2*G,-10);cx.lineTo(2*G,10);cx.moveTo(2*G,0);cx.lineTo(L,0)}
   else if(c.t=='S'){cx.moveTo(0,0);cx.lineTo(G,0);cx.moveTo(2*G,0);cx.lineTo(L,0);cx.moveTo(G,0);cx.lineTo(c.on?2*G:2*G-4,c.on?0:-14)}
-  cx.stroke();
+  cx.stroke();cx.shadowBlur=0;
   if(c.t=='V'||c.t=='A'){cx.fillText('+',L-10,-8);cx.fillText('−',4,-8)}
   cx.restore();
   if(c.t=='G')continue;
   const d=D[c.r],mx=(c.x+d[0]*1.5)*G,my=(c.y+d[1]*1.5)*G,hz=d[1]==0;
-  const nmI=T[c.t].nm?T[c.t].p.indexOf(c.val):-1,l1=c.t=='S'?(c.on?'ON':'OFF'):(nmI>=0?T[c.t].nm[nmI]+' ':'')+fmt(c.val,T[c.t].u)+(c.t=='A'?' '+fmt(c.f,'Hz'):''),l2=fmt(c.v,'V')+' '+fmt(c.i,'A');
-  cx.fillStyle=col;cx.textAlign=hz?'center':'left';
-  cx.fillText(l1,hz?mx:mx+14,hz?my-18:my-3);cx.fillStyle=ac;cx.fillText(l2,hz?mx:mx+14,hz?my+26:my+11)}
+  const nI=T[c.t].nm?T[c.t].p.indexOf(c.val):-1,l1=c.t=='S'?(c.on?'ON':'OFF'):(nI>=0?T[c.t].nm[nI]+' ':'')+fmt(c.val,T[c.t].u)+(c.t=='A'?' '+fmt(c.f,'Hz'):''),l2=fmt(c.v,'V')+' '+fmt(c.i,'A');
+  cx.fillStyle=fg;cx.textAlign=hz?'center':'left';
+  cx.fillText(l1,hz?mx:mx+14,hz?my-18:my-3);cx.fillStyle=mu;cx.fillText(l2,hz?mx:mx+14,hz?my+26:my+11)}
  cx.fillStyle=ac;
  for(const c of S.comps)for(const p of term(c)){cx.beginPath();cx.arc(p[0]*G,p[1]*G,3.5,0,7);cx.fill()}
  const cn={};S.wires.forEach(w=>w.forEach(p=>cn[K(p)]=(cn[K(p)]||0)+1));S.comps.forEach(c=>term(c).forEach(p=>cn[K(p)]=(cn[K(p)]||0)+1));S.wires.forEach(w=>[...S.comps.flatMap(term),...S.wires.flat()].forEach(p=>{if(K(p)!=K(w[0])&&K(p)!=K(w[1])&&onSeg(p,w[0],w[1]))cn[K(p)]=(cn[K(p)]||0)+2}));cx.fillStyle=wr;for(const k in cn)if(cn[k]>2){const[x,y]=k.split(',');cx.beginPath();cx.arc(x*G,y*G,5,0,7);cx.fill()}
- sx.clearRect(0,0,sc.width,sc.height);
- if(S.sel&&S.hist.length>1){const h=S.hist,mn=Math.min(...h),mx=Math.max(...h,mn+1e-9),W=sc.width,H=sc.height;
+ sx.setTransform(DPR,0,0,DPR,0,0);const SW=sc.clientWidth,SH=sc.clientHeight;sx.clearRect(0,0,SW,SH);sx.font='11px system-ui';sx.fillStyle=mu;
+ if(!S.sel||S.hist.length<2)sx.fillText('Pilih komponen untuk melihat grafik tegangan',0,16);
+ else{const h=S.hist,mn=Math.min(...h),mx=Math.max(...h,mn+1e-9);
   sx.strokeStyle=ac;sx.lineWidth=2;sx.beginPath();
-  h.forEach((v,i)=>{const X=i/(300-1)*W,Y=H-6-(v-mn)/(mx-mn)*(H-12);i?sx.lineTo(X,Y):sx.moveTo(X,Y)});sx.stroke();
-  sx.fillStyle=fg;sx.font='11px system-ui';sx.fillText('Tegangan '+T[S.sel.t].n+': '+fmt(mn,'V')+' … '+fmt(mx,'V'),6,12)}
+  h.forEach((v,i)=>{const X=i/299*SW,Y=SH-6-(v-mn)/(mx-mn)*(SH-24);i?sx.lineTo(X,Y):sx.moveTo(X,Y)});sx.stroke();
+  sx.fillStyle=mu;sx.fillText(T[S.sel.t].n+': '+fmt(mn,'V')+' … '+fmt(mx,'V'),0,12)}
 }
 function loop(){
  if(S.run&&net)for(let i=0;i<50;i++){step();if(i%5==0&&S.sel){S.hist.push(S.sel.v);if(S.hist.length>300)S.hist.shift()}}
- let msg=!net?'Tambahkan komponen GND agar simulasi berjalan.':'t = '+fmt(S.t,'s')+(S.run?'':' (dijeda)');
- if(net&&S.comps.some(c=>c.t=='D'&&c.i>.03))msg+=' ⚠ LED kelebihan arus, tambahkan resistor!';
- $('#st').textContent=(S.note?S.note+' · ':'')+msg;draw();requestAnimationFrame(loop)}
-const A=(t,x,y,r,val)=>S.comps.push({t,x,y,r,val:val??T[t].v,on:true,v:0,i:0,vd:0});
-A('V',4,9,3);A('R',4,6,0);A('D',7,6,1);A('G',4,9,0);A('S',10,3,0);
-S.comps.pop();S.wires.push([[7,9],[4,9]]);
-fit();build();ui();loop();
+ const w=!net?'Tambahkan komponen GND agar simulasi berjalan':S.comps.some(c=>c.t=='D'&&c.i>.03)?'LED kelebihan arus, tambahkan resistor':'';
+ const sb=$('#st');sb.className=w?'w':'';sb.textContent=(S.note?S.note+' · ':'')+(w||('t = '+fmt(S.t,'s')+(S.run?'':' · dijeda')));
+ const c=S.sel;if(c&&$('#rv')){$('#rv').textContent=fmt(c.v,'V');$('#ri').textContent=fmt(c.i,'A');$('#rp').textContent=fmt(Math.abs(c.v*c.i),'W')}
+ draw();requestAnimationFrame(loop)}
+exm(0);S.U=[];fit();loop();
 </script></body></html>
