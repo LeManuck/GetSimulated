@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-11-21: v0.3.1, dioda dipilih lewat kode komponen (Claude)
+**Dilakukan** (file: `index.html`)
+- Selector dioda kini berisi kode komponen: 1N4148 (Vf 0,72 V), 1N4007 (0,68 V), 1N5819 Schottky (0,3 V), BAT54 Schottky (0,4 V). Nilai Vf adalah perkiraan pada arus sekitar 10 mA, bukan data lembar data lengkap.
+- Label di kanvas kini menampilkan kode dioda (atau warna LED) di samping nilainya.
+- Nilai Kustom tetap bisa diketik; labelnya hilang jika nilai tidak cocok dengan salah satu kode.
+
+**Catatan**
+- Model dioda masih sederhana (Shockley, satu titik kalibrasi). Belum ada tegangan tembus (Zener/breakdown) maupun batas arus maksimum per tipe.
+- Belum diuji langsung di browser oleh Claude.
+
+---
+
 ## 2026-11-21: v0.3.0, perbaikan bug geser, undo, simpan/muat, dioda (Claude)
 **Bug diperbaiki** (file: `index.html`)
 - Saat komponen digeser dan terminalnya (mis. anoda dioda) menyentuh kabel, kabel itu dulu dipecah permanen menjadi kabel baru dan tersambung. Sekarang kabel TIDAK pernah diubah otomatis: sambungan T dihitung secara virtual saat membangun rangkaian (fungsi `onSeg`, menggantikan `splitAt`). Terminal hanya tersambung selama benar-benar berada di kabel itu; digeser menjauh, sambungan lepas dan tidak ada kabel baru tertinggal.
@@ -13,10 +25,9 @@
 **Fitur baru**
 - Undo (tombol Undo atau Ctrl/Cmd+Z, hingga 50 langkah): penempatan, hapus, kabel, geser, putar, ubah nilai.
 - Simpan / Muat rangkaian lewat `localStorage` browser (satu slot).
-- Dioda biasa (Vf 0,2 / 0,3 / 0,7 V), memakai model Shockley yang sama dengan LED, tanpa cahaya.
+- Dioda biasa, memakai model Shockley yang sama dengan LED, tanpa cahaya.
 
 **Catatan**
-- Belum diuji langsung di browser oleh Claude, hanya ditulis dan dipublikasikan.
 - Transistor (komponen 3 terminal) belum dikerjakan: perlu perubahan struktur terminal dan solver. Direncanakan untuk versi berikutnya.
 - Simpan/Muat bergantung pada `localStorage`; bisa gagal di mode privat atau jika browser memblokirnya (muncul pesan di bilah status).
 
