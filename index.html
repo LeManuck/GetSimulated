@@ -29,12 +29,18 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px;max-
 .ar,.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.row{margin-bottom:6px}
 #sc{width:100%;height:90px;display:block}
 @media(min-width:860px){main{grid-template-columns:176px minmax(0,1fr) 300px;align-items:start}#tb{flex-direction:column;overflow:visible}#tb h6{display:block}#tb button{flex-direction:row;font-size:13px;gap:8px;min-width:0;justify-content:flex-start}#cv{height:calc(100vh - 100px);min-height:460px}.lg small{display:inline}}
+#pk{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:9}#pk[hidden]{display:none}
+.sh{background:var(--pn);width:100%;max-width:600px;max-height:84vh;border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+.sh-h{display:flex;justify-content:space-between;align-items:center}.sh input{width:100%}.chips{display:flex;gap:6px;overflow-x:auto}
+#pl{overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;align-content:start}.pc{display:flex;gap:8px;align-items:center;text-align:left}
+@media(min-width:860px){#pk{align-items:center}.sh{border-radius:16px}}
 </style></head><body>
 <header><div class="lg"><svg width="28" height="28" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2f6df6"/><path d="M3 13h4l2-5 3 9 2-6 1 2h6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><b>GetSimulated</b><small>Simulator elektronik</small></div>
-<div class="hr"><select id="ex"></select><button id="th" title="Tema">◐</button><button id="run" class="pri"></button></div></header>
+<div class="hr"><select id="ex"></select><button id="vw"></button><button id="th" title="Tema">◐</button><button id="run" class="pri"></button></div></header>
 <main><aside id="tb"></aside>
 <section class="cvw"><canvas id="cv"></canvas><div id="st"></div><div class="zm"><button onclick="zoom(1.2)">+</button><button onclick="zoom(.83)">−</button><button onclick="V.z=1;V.x=V.y=0" title="Reset tampilan">⌂</button></div></section>
 <aside><div id="pn"></div><div class="card"><b>Osiloskop</b><canvas id="sc"></canvas></div></aside></main>
+<div id="pk" hidden><div class="sh"><div class="sh-h"><b>Pick parts</b><button onclick="pick(0)">✕</button></div><input id="q" placeholder="Cari: resistor, 1N4148, ground, baterai…" autocomplete="off"><div id="cc" class="chips"></div><div id="pl"></div></div></div>
 <script>
 let G=24;const $=s=>document.querySelector(s),cv=$('#cv'),cx=cv.getContext('2d'),sc=$('#sc'),sx=sc.getContext('2d');
 const DPR=Math.min(devicePixelRatio||1,2),V={z:1,x:0,y:0},D=[[1,0],[0,1],[-1,0],[0,-1]];
@@ -52,7 +58,7 @@ const ico=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke
 const EX=[['LED + resistor',[['V',4,9,3],['R',4,6,0],['D',7,6,1],['G',4,9,0]],[[[7,9],[4,9]]]],
 ['Pengisian kapasitor (RC)',[['V',4,9,3,9],['S',4,6,0],['R',7,6,0,1000],['C',10,6,1,1e-4],['G',4,9,0]],[[[10,9],[4,9]]]],
 ['Penyearah setengah gelombang',[['A',4,9,3,5],['J',4,6,0],['R',7,6,1,1000],['C',10,6,1,1e-5],['G',4,9,0]],[[[7,6],[10,6]],[[10,9],[7,9]],[[7,9],[4,9]]]]];
-const S={comps:[],wires:[],tool:'sel',sel:null,rot:0,run:true,t:0,ws:null,dt:1e-4,hist:[],U:[]};
+const S={comps:[],wires:[],tool:'sel',sel:null,rot:0,run:true,t:0,ws:null,dt:1e-4,hist:[],U:[],real:true,pv:null,rc:[3,6,0,2]};
 let net=null;
 function fmt(x,u){if(x==null||isNaN(x))return'';const a=Math.abs(x);if(a<1e-15)return'0'+u;
 for(const[s,p]of[[1e9,'G'],[1e6,'M'],[1e3,'k'],[1,''],[1e-3,'m'],[1e-6,'µ'],[1e-9,'n'],[1e-12,'p']])if(a>=s*.9999)return+(x/s).toPrecision(3)+p+u;return x.toExponential(1)+u}
@@ -112,7 +118,7 @@ const hit=(px,py)=>S.comps.find(c=>{const[a,b]=term(c);return dseg(px,py,a[0]*G,
 const wp=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left-V.x)/V.z,(e.clientY-r.top-V.y)/V.z]};
 function zoom(k,X,Y){const r=cv.getBoundingClientRect(),px=X==null?r.width/2:X-r.left,py=Y==null?r.height/2:Y-r.top,nz=Math.max(.5,Math.min(2.5,V.z*k)),f=nz/V.z;V.x=px-(px-V.x)*f;V.y=py-(py-V.y)*f;V.z=nz}
 cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.1:.9,e.clientX,e.clientY)},{passive:false});
-function setTool(t){S.tool=t;S.ws=null;ui()}
+function setTool(t){S.tool=t;S.ws=null;S.pv=null;ui()}
 cv.addEventListener('pointerdown',e=>{
  const[px,py]=wp(e),gx=Math.round(px/G),gy=Math.round(py/G),t=S.tool;
  if(t=='sel'){const c=hit(px,py)||null;if(c!==S.sel)S.hist=[];S.sel=c;
@@ -123,7 +129,7 @@ cv.addEventListener('pointerdown',e=>{
   else{const w=S.wires.findIndex(w=>dseg(px,py,w[0][0]*G,w[0][1]*G,w[1][0]*G,w[1][1]*G)<8);if(w>=0)S.wires.splice(w,1)}build()}
  else if(t=='wire'){if(!S.ws)S.ws=[gx,gy];else{const a=S.ws;
   if(a[0]!=gx||a[1]!=gy){snap();if(a[0]!=gx&&a[1]!=gy){const m=[gx,a[1]];S.wires.push([a,m],[m,[gx,gy]])}else S.wires.push([a,[gx,gy]]);build()}S.ws=null}}
- else{snap();const c={t,x:gx,y:gy,r:S.rot,val:T[t].v,f:T[t].f,on:true};S.comps.push(c);S.sel=c;S.hist=[];build()}
+ else{snap();const c={t,x:gx,y:gy,r:S.rot,val:S.pv??T[t].v,f:T[t].f,on:true};S.comps.push(c);S.sel=c;S.hist=[];build()}
  ui()});
 addEventListener('pointermove',e=>{
  if(S.pan){V.x=S.pan.vx+e.clientX-S.pan.x;V.y=S.pan.vy+e.clientY-S.pan.y;return}
@@ -139,16 +145,30 @@ function load(){try{const j=localStorage.getItem('getsim');if(j){snap();restore(
 function rot(){S.rot=(S.rot+1)%4;if(S.sel){snap();S.sel.r=S.rot;build()}ui()}
 function del(){if(!S.sel)return;snap();S.comps.splice(S.comps.indexOf(S.sel),1);S.sel=null;build();ui()}
 function exm(i){snap();S.comps=[];S.wires=[];EX[i][1].forEach(([t,x,y,r,v,f])=>S.comps.push({t,x,y,r,val:v??T[t].v,f:f??T[t].f,on:true,v:0,i:0,vd:0}));EX[i][2].forEach(w=>S.wires.push(w));S.sel=null;V.z=1;V.x=V.y=0;build();ui()}
-addEventListener('keydown',e=>{if(e.target.tagName=='INPUT'||e.target.tagName=='SELECT')return;if(e.key=='r')rot();if((e.ctrlKey||e.metaKey)&&e.key=='z')undo();if(e.key=='Delete'||e.key=='Backspace')del()});
+addEventListener('keydown',e=>{if(e.key=='Escape')pick(0);if(!$('#pk').hidden||e.target.tagName=='INPUT'||e.target.tagName=='SELECT')return;if(e.key=='r')rot();if((e.ctrlKey||e.metaKey)&&e.key=='z')undo();if(e.key=='Delete'||e.key=='Backspace')del()});
 const bt=(k,i,n,f)=>`<button data-k="${k}" onclick="${f}">${i}<span>${n}</span></button>`;
-$('#tb').innerHTML='<h6>Alat</h6>'+[['sel','Pilih'],['wire','Kabel'],['del','Hapus']].map(([k,n])=>bt(k,ico(k),n,`setTool('${k}')`)).join('')+'<h6>Komponen</h6>'+Object.keys(T).map(k=>bt(k,ico(k),T[k].n,`setTool('${k}')`)).join('')+'<h6>Aksi</h6>'+[['rot()','↻','Putar'],['undo()','↶','Undo'],['save()','⇩','Simpan'],['load()','⇧','Muat'],['build()','⟲','Reset']].map(([f,i,n])=>bt('',`<b>${i}</b>`,n,f)).join('')+'<select id="dt"><option value="1e-5">Lambat (10µs)</option><option value="1e-4" selected>Normal (100µs)</option><option value="1e-3">Cepat (1ms)</option></select>';
+$('#tb').innerHTML='<h6>Alat</h6>'+[['sel','Pilih'],['wire','Kabel'],['del','Hapus']].map(([k,n])=>bt(k,ico(k),n,`setTool('${k}')`)).join('')+'<h6>Komponen</h6><button class="pri" onclick="pick(1)">＋ Pick parts</button><h6>Terakhir dipakai</h6><div id="rc" style="display:contents"></div>'+'<h6>Aksi</h6>'+[['rot()','↻','Putar'],['undo()','↶','Undo'],['save()','⇩','Simpan'],['load()','⇧','Muat'],['build()','⟲','Reset']].map(([f,i,n])=>bt('',`<b>${i}</b>`,n,f)).join('')+'<select id="dt"><option value="1e-5">Lambat (10µs)</option><option value="1e-4" selected>Normal (100µs)</option><option value="1e-3">Cepat (1ms)</option></select>';
 $('#ex').innerHTML='<option value="">Contoh rangkaian…</option>'+EX.map((e,i)=>`<option value="${i}">${e[0]}</option>`).join('');
 $('#ex').onchange=e=>{if(e.target.value!=='')exm(+e.target.value);e.target.value=''};
 $('#dt').onchange=e=>S.dt=+e.target.value;$('#run').onclick=()=>{S.run=!S.run;ui()};
 $('#th').onclick=()=>{const d=document.documentElement;d.dataset.theme=(d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))=='dark'?'light':'dark'};
+const CATS=['Semua','Daya','Pasif','Semikonduktor','Kontrol'];
+const PARTS=[['V','Baterai','Daya','baterai battery aki dc catu daya sumber tegangan power'],['A','Sumber AC','Daya','ac sinus generator listrik bolak balik power'],['G','GND','Daya','ground tanah referensi nol'],
+['R','Resistor','Pasif','hambatan ohm resistance'],['C','Kapasitor','Pasif','kondensator capacitor farad'],['L','Induktor','Pasif','kumparan inductor coil henry'],
+...T.D.nm.map((n,i)=>['D','LED '+n,'Semikonduktor','lampu led light '+n,T.D.p[i]]),...T.J.nm.map((n,i)=>['J','Dioda '+n,'Semikonduktor','diode penyearah '+n,T.J.p[i]]),
+['S','Saklar','Kontrol','switch tombol on off']];
+let Q='',CT='Semua';
+function pick(o){$('#pk').hidden=!o;if(o){$('#q').value=Q='';CT='Semua';rp();setTimeout(()=>$('#q').focus(),50)}}
+function rp(){$('#cc').innerHTML=CATS.map(c=>`<button class="${c==CT?'on':''}" onclick="CT='${c}';rp()">${c}</button>`).join('');
+ const q=Q.toLowerCase().trim(),L=PARTS.map((p,i)=>[p,i]).filter(([p])=>(CT=='Semua'||p[2]==CT)&&(!q||(p[1]+' '+p[2]+' '+p[3]).toLowerCase().includes(q)));
+ $('#pl').innerHTML=L.length?L.map(([p,i])=>`<button class="pc" onclick="usePart(${i})">${ico(p[0])}<span><b>${p[1]}</b><br><small class="mu">${p[2]}${p[4]!=null?' · '+fmt(p[4],'V'):''}</small></span></button>`).join(''):'<p class="mu">Tidak ada komponen yang cocok.</p>'}
+function rcb(){$('#rc').innerHTML=S.rc.map(i=>bt(PARTS[i][0],ico(PARTS[i][0]),PARTS[i][1],`usePart(${i})`)).join('')}
+function usePart(i){const p=PARTS[i];S.tool=p[0];S.pv=p[4];S.ws=null;S.rc=[i,...S.rc.filter(x=>x!=i)].slice(0,4);pick(0);rcb();ui()}
+$('#q').oninput=e=>{Q=e.target.value;rp()};$('#pk').onclick=e=>{if(e.target.id=='pk')pick(0)};
+$('#vw').onclick=()=>{S.real=!S.real;ui()};
 function ui(){
  document.querySelectorAll('#tb [data-k]').forEach(b=>b.classList.toggle('on',b.dataset.k==S.tool));
- $('#run').textContent=S.run?'⏸ Jeda':'▶ Jalankan';
+ $('#run').textContent=S.run?'⏸ Jeda':'▶ Jalankan';$('#vw').textContent=S.real?'Tampilan: Gambar':'Tampilan: Skema';
  const c=S.sel,p=$('#pn');
  if(!c){p.innerHTML='<div class="card"><b>Mulai</b><p class="mu">Pilih komponen di palet lalu ketuk grid untuk menaruhnya. Pakai Kabel untuk menyambung dua titik. Rangkaian wajib punya GND.</p><p class="mu">Seret komponen untuk memindah, seret area kosong untuk menggeser tampilan. Coba menu Contoh rangkaian di atas.</p></div>';return}
  const t=T[c.t];let h=`<div class="card"><div class="ct">${ico(c.t)}<b>${t.n}</b></div><div class="row">`;
@@ -164,6 +184,24 @@ function ui(){
 function fit(){cv.width=cv.clientWidth*DPR;cv.height=cv.clientHeight*DPR;sc.width=sc.clientWidth*DPR;sc.height=sc.clientHeight*DPR}
 new ResizeObserver(fit).observe(cv);new ResizeObserver(fit).observe(sc);
 const LED=c=>c.val>=2.8?'77,163,255':c.val>=2.05?'67,224,107':c.val>=1.95?'255,200,30':'255,59,59';
+const BC=['#111','#7a4a21','#d32f2f','#f57c00','#fbc02d','#2e7d32','#1976d2','#7b1fa2','#808080','#fff'];
+function real(c,L,m){
+ const ld=(a,b)=>{cx.save();cx.shadowBlur=0;cx.strokeStyle='#98a2b3';cx.lineWidth=2.5;cx.beginPath();cx.moveTo(0,0);cx.lineTo(a,0);cx.moveTo(b,0);cx.lineTo(L,0);cx.stroke();cx.restore()},
+ rr=(x,y,w,h,r,f)=>{cx.beginPath();cx.roundRect(x,y,w,h,r);cx.fillStyle=f;cx.fill()},t=c.t;
+ if(t=='R'){ld(20,52);rr(20,-7,32,14,6,'#e3c9a0');cx.shadowBlur=0;
+  let e=Math.floor(Math.log10(c.val)),d=Math.round(c.val/10**(e-1));if(d>=100){d=10;e++}
+  [BC[d/10|0],BC[d%10],e-1>=0?BC[e-1]:e==0?'#c9a227':'#b8b8b8','#c9a227'].forEach((k,i)=>{cx.fillStyle=k;cx.fillRect(25+i*7,-7,3.5,14)})}
+ else if(t=='D'){const a=Math.min(1,Math.max(0,c.i)/.015),r=LED(c);ld(m-11,m+11);
+  if(a>.02){cx.save();cx.shadowBlur=0;cx.fillStyle=`rgba(${r},${a*.55})`;cx.beginPath();cx.arc(m,0,26,0,7);cx.fill();cx.restore()}
+  cx.beginPath();cx.arc(m,0,11,0,7);cx.fillStyle=`rgba(${r},${.38+.62*a})`;cx.fill();cx.shadowBlur=0;cx.strokeStyle=`rgb(${r})`;cx.lineWidth=1.5;cx.stroke();
+  cx.fillStyle='rgba(255,255,255,.55)';cx.beginPath();cx.ellipse(m-3,-4,3,2,-.6,0,7);cx.fill()}
+ else if(t=='J'){ld(m-14,m+14);rr(m-14,-5,28,10,2,'#2b2b2f');cx.shadowBlur=0;cx.fillStyle='#d0d0d6';cx.fillRect(m+7,-5,4,10)}
+ else if(t=='V'){ld(m-16,m+20);rr(m-16,-10,32,20,4,'#2b2f3a');cx.shadowBlur=0;cx.fillStyle='#e5484d';cx.fillRect(m-6,-10,8,20);rr(m+16,-4,4,8,1,'#c8ccd4')}
+ else if(t=='C'){ld(m-10,m+10);rr(m-10,-12,20,24,4,'#2f6fd1');cx.shadowBlur=0;cx.fillStyle='#cfe0ff';cx.fillRect(m-10,-12,5,24)}
+ else if(t=='L'){ld(20,52);rr(20,-8,32,16,5,'#b87333');cx.shadowBlur=0;cx.strokeStyle='#7a4a1c';cx.lineWidth=1.5;cx.beginPath();for(let x=26;x<50;x+=5){cx.moveTo(x,-8);cx.lineTo(x,8)}cx.stroke()}
+ else if(t=='A'){ld(m-15,m+15);cx.beginPath();cx.arc(m,0,15,0,7);cx.fillStyle='#e8ecf5';cx.fill();cx.shadowBlur=0;cx.strokeStyle='#5a6478';cx.lineWidth=2;cx.stroke();cx.strokeStyle='#e5484d';cx.beginPath();cx.moveTo(m-9,0);for(let i=-9;i<=9;i++)cx.lineTo(m+i,-6*Math.sin(i/9*Math.PI));cx.stroke()}
+ else if(t=='S'){const k=c.on?9:-9;ld(22,50);rr(22,-6,28,14,4,'#3a3f4b');cx.shadowBlur=0;cx.strokeStyle='#e8ecf5';cx.lineWidth=4;cx.beginPath();cx.moveTo(m,0);cx.lineTo(m+k,-12);cx.stroke();cx.fillStyle='#fff';cx.beginPath();cx.arc(m+k,-12,3,0,7);cx.fill()}
+ cx.beginPath()}
 function draw(){
  const st=getComputedStyle(document.documentElement),fg=st.getPropertyValue('--fg'),mu=st.getPropertyValue('--mu'),dot=st.getPropertyValue('--dot'),ac=st.getPropertyValue('--ac'),wr=st.getPropertyValue('--wr');
  cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);
@@ -177,7 +215,8 @@ function draw(){
  for(const c of S.comps){
   const col=c===S.sel?ac:TC[c.t];cx.strokeStyle=cx.fillStyle=col;cx.shadowColor=ac;cx.shadowBlur=c===S.sel?10:0;
   cx.save();cx.translate(c.x*G,c.y*G);cx.rotate(c.r*Math.PI/2);cx.beginPath();
-  if(c.t=='G'){cx.moveTo(0,0);cx.lineTo(0,10);cx.moveTo(-12,10);cx.lineTo(12,10);cx.moveTo(-8,15);cx.lineTo(8,15);cx.moveTo(-4,20);cx.lineTo(4,20)}
+  if(S.real&&c.t!='G')real(c,L,m);
+  else if(c.t=='G'){cx.moveTo(0,0);cx.lineTo(0,10);cx.moveTo(-12,10);cx.lineTo(12,10);cx.moveTo(-8,15);cx.lineTo(8,15);cx.moveTo(-4,20);cx.lineTo(4,20)}
   else if(c.t=='R'){cx.moveTo(0,0);cx.lineTo(G,0);cx.rect(G,-7,G,14);cx.moveTo(2*G,0);cx.lineTo(L,0)}
   else if(c.t=='C'){cx.moveTo(0,0);cx.lineTo(m-3,0);cx.moveTo(m-3,-12);cx.lineTo(m-3,12);cx.moveTo(m+3,-12);cx.lineTo(m+3,12);cx.moveTo(m+3,0);cx.lineTo(L,0)}
   else if(c.t=='L'){cx.moveTo(0,0);cx.lineTo(14,0);for(let i=0;i<4;i++)cx.arc(20+i*12,0,6,Math.PI,0);cx.lineTo(L,0)}
@@ -211,5 +250,5 @@ function loop(){
  const sb=$('#st');sb.className=w?'w':'';sb.textContent=(S.note?S.note+' · ':'')+(w||('t = '+fmt(S.t,'s')+(S.run?'':' · dijeda')));
  const c=S.sel;if(c&&$('#rv')){$('#rv').textContent=fmt(c.v,'V');$('#ri').textContent=fmt(c.i,'A');$('#rp').textContent=fmt(Math.abs(c.v*c.i),'W')}
  draw();requestAnimationFrame(loop)}
-exm(0);S.U=[];fit();loop();
+exm(0);S.U=[];rcb();fit();loop();
 </script></body></html>
