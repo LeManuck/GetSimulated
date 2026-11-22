@@ -885,7 +885,7 @@ function onSeg(p, a, b) {
 }
 
 function simplifyWires() {
-  if (S.dragWireHandle) return;
+  if (S.dragCorner) return;
 
   // 1. Hapus kabel dengan panjang 0 dan duplikat persis
   for (let i = S.wires.length - 1; i >= 0; i--) {
@@ -1128,7 +1128,7 @@ cv.addEventListener('pointerdown', e => {
       const p1 = [w[1][0] * G, w[1][1] * G];
       const pm = [(w[0][0] + w[1][0]) / 2 * G, (w[0][1] + w[1][1]) / 2 * G];
 
-      // Clicked midpoint handle (bend the wire)
+      // 1. Clicked midpoint handle (bend the wire)
       if (Math.hypot(px - pm[0], py - pm[1]) < 12) {
         snap();
         const midGrid = [gx, gy];
@@ -1137,21 +1137,38 @@ cv.addEventListener('pointerdown', e => {
         const idx = S.wires.indexOf(w);
         if (idx >= 0) S.wires.splice(idx, 1, w1, w2);
         S.selWire = w1;
-        S.dragWireHandle = { pt: midGrid, w2 };
+        S.dragCorner = { pts: [w1[1], w2[0]] };
         build();
         ui();
         return;
       }
-      // Clicked endpoint handles
-      if (Math.hypot(px - p0[0], py - p0[1]) < 12) {
-        snap();
-        S.dragWireHandle = { pt: w[0] };
-        return;
-      }
-      if (Math.hypot(px - p1[0], py - p1[1]) < 12) {
-        snap();
-        S.dragWireHandle = { pt: w[1] };
-        return;
+
+      // 2. Clicked endpoint handles
+      let clickedEnd = null;
+      if (Math.hypot(px - p0[0], py - p0[1]) < 12) clickedEnd = w[0];
+      else if (Math.hypot(px - p1[0], py - p1[1]) < 12) clickedEnd = w[1];
+
+      if (clickedEnd) {
+        const targetX = clickedEnd[0], targetY = clickedEnd[1];
+        // Cek apakah titik ini terhubung ke terminal komponen
+        const isCompTerm = S.comps.flatMap(term).some(t => t[0] === targetX && t[1] === targetY);
+        if (isCompTerm) {
+          note('Ujung kabel terhubung ke komponen. Tarik titik kuning di tengah untuk membengkokkan rute.');
+          return;
+        }
+
+        // Kumpulkan SEMUA ujung kabel yang bertemu di titik sudut ini agar tidak pernah terputus!
+        const connectedPts = [];
+        S.wires.forEach(otherW => {
+          if (otherW[0][0] === targetX && otherW[0][1] === targetY) connectedPts.push(otherW[0]);
+          if (otherW[1][0] === targetX && otherW[1][1] === targetY) connectedPts.push(otherW[1]);
+        });
+
+        if (connectedPts.length > 0) {
+          snap();
+          S.dragCorner = { pts: connectedPts };
+          return;
+        }
       }
     }
 
@@ -1213,19 +1230,19 @@ cv.addEventListener('pointerdown', e => {
 });
 
 addEventListener('pointermove', e => {
-  if (S.dragWireHandle) {
+  if (S.dragCorner) {
     const [px, py] = wp(e);
     const gx = Math.round(px / G);
     const gy = Math.round(py / G);
-    if (S.dragWireHandle.pt[0] !== gx || S.dragWireHandle.pt[1] !== gy) {
-      S.dragWireHandle.pt[0] = gx;
-      S.dragWireHandle.pt[1] = gy;
-      if (S.dragWireHandle.w2) {
-        S.dragWireHandle.w2[0][0] = gx;
-        S.dragWireHandle.w2[0][1] = gy;
+    let moved = false;
+    S.dragCorner.pts.forEach(p => {
+      if (p[0] !== gx || p[1] !== gy) {
+        p[0] = gx;
+        p[1] = gy;
+        moved = true;
       }
-      build();
-    }
+    });
+    if (moved) build();
     return;
   }
   if (S.pan) {
@@ -1246,9 +1263,9 @@ addEventListener('pointermove', e => {
 });
 
 addEventListener('pointerup', () => {
-  const hadDragHandle = !!S.dragWireHandle;
-  S.drag = S.pan = S.dragWireHandle = null;
-  if (hadDragHandle) {
+  const hadDrag = !!S.dragCorner;
+  S.drag = S.pan = S.dragCorner = null;
+  if (hadDrag) {
     simplifyWires();
     build();
     ui();
@@ -1273,7 +1290,7 @@ function restore(j) {
   S.sel = null;
   S.selWire = null;
   S.drag = null;
-  S.dragWireHandle = null;
+  S.dragCorner = null;
   build();
   ui();
 }
@@ -1748,14 +1765,27 @@ function draw() {
     cx.fill();
     cx.stroke();
 
-    // Endpoints handles (Blue with white stroke)
-    cx.fillStyle = ac;
-    [p0, p1].forEach(p => {
-      cx.beginPath();
-      cx.arc(p[0], p[1], 4.5, 0, 7);
-      cx.fill();
-      cx.stroke();
-    });
+    // Endpoints handles (Locked terminal or free corner)
+    const compTerms = S.comps.flatMap(term);
+    const isTerm0 = compTerms.some(t => t[0] === w[0][0] && t[1] === w[0][1]);
+    const isTerm1 = compTerms.some(t => t[0] === w[1][0] && t[1] === w[1][1]);
+
+    cx.strokeStyle = '#ffffff';
+    cx.lineWidth = 1.5;
+
+    // Endpoint 0
+    cx.fillStyle = isTerm0 ? '#64748b' : ac;
+    cx.beginPath();
+    cx.arc(p0[0], p0[1], isTerm0 ? 3.5 : 4.5, 0, 7);
+    cx.fill();
+    cx.stroke();
+
+    // Endpoint 1
+    cx.fillStyle = isTerm1 ? '#64748b' : ac;
+    cx.beginPath();
+    cx.arc(p1[0], p1[1], isTerm1 ? 3.5 : 4.5, 0, 7);
+    cx.fill();
+    cx.stroke();
   }
 
   // Active wire drawing preview
