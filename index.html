@@ -636,7 +636,7 @@ main {
       </svg>
     </div>
     <div class="brand-info">
-      <span class="brand-name">GetSimulated <span class="badge-ver">v1.2</span></span>
+      <span class="brand-name">GetSimulated <span class="badge-ver">v1.5</span></span>
       <span class="brand-sub">Simulator Rangkaian Elektronik</span>
     </div>
   </div>
@@ -767,19 +767,19 @@ main {
     <div class="modal-body">
       <table class="shortcut-table">
         <tr><td><kbd>V</kbd></td><td>Alat <b>Pilih</b> (Pindah, Inspeksi komponen & kabel)</td></tr>
-        <tr><td><kbd>W</kbd></td><td>Alat <b>Kabel</b> (Tarik Sambungan Baru)</td></tr>
         <tr><td><kbd>R</kbd></td><td><b>Putar</b> komponen terpilih 90°</td></tr>
         <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td><b>Hapus</b> komponen / kabel yang sedang terpilih</td></tr>
         <tr><td><kbd>Spasi</kbd></td><td><b>Jalankan / Jeda</b> simulasi</td></tr>
         <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td><b>Undo</b> langkah sebelumnya</td></tr>
         <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td><b>Redo</b> langkah sesudahnya</td></tr>
-        <tr><td><kbd>Esc</kbd></td><td>Tutup dialog / batal tarik kabel</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Tutup dialog / batal tarik kabel / batal menaruh komponen</td></tr>
         <tr><td><kbd>Scroll Mouse</kbd></td><td>Zoom in / zoom out kanvas</td></tr>
       </table>
       <div class="guide-box">
         <strong>Tips Penggunaan:</strong>
         <ul class="guide-list">
-          <li><b>Re-route Kabel:</b> Klik kabel untuk memilihnya, lalu seret <b>titik kuning di tengah</b> untuk membengkokkan kabel.</li>
+          <li><b>Menyambung Kabel:</b> Tekan dan seret dari pin (ujung) satu komponen ke pin komponen lain. Rute dibuat otomatis dan menghindari badan komponen. Kabel juga bisa diakhiri di tengah kabel lain.</li>
+          <li><b>Kabel Ikut Komponen:</b> Saat komponen digeser atau diputar, kabel yang terhubung otomatis diroute ulang.</li>
           <li><b>Menghapus:</b> Pilih komponen atau kabel terlebih dahulu, lalu klik tombol Hapus atau tekan tombol Delete / Backspace.</li>
           <li><b>Auto-Pilih:</b> Menaruh komponen otomatis beralih ke alat Pilih agar tidak perlu klik ganti alat.</li>
         </ul>
@@ -830,30 +830,35 @@ const IC = {
 
 const ico = (k, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${TC[k] || 'currentColor'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg>`;
 
+// Contoh rangkaian: [nama, komponen, kabel]. Kabel = [indeksKomp, pin, indeksKomp, pin] (pin 0 = kaki a, 1 = kaki b)
 const EX = [
-  ['LED + resistor', [['V', 4, 9, 3], ['R', 4, 6, 0], ['D', 7, 6, 1], ['G', 4, 9, 0]], [[[7, 9], [4, 9]]]],
-  ['Pengisian kapasitor (RC)', [['V', 4, 9, 3, 9], ['S', 4, 6, 0], ['R', 7, 6, 0, 1000], ['C', 10, 6, 1, 1e-4], ['G', 4, 9, 0]], [[[10, 9], [4, 9]]]],
-  ['Penyearah setengah gelombang', [['A', 4, 9, 3, 5], ['J', 4, 6, 0], ['R', 7, 6, 1, 1000], ['C', 10, 6, 1, 1e-5], ['G', 4, 9, 0]], [[[7, 6], [10, 6]], [[10, 9], [7, 9]], [[7, 9], [4, 9]]]]
+  ['LED + resistor', [['V', 4, 9, 3], ['R', 4, 6, 0], ['D', 7, 6, 1], ['G', 4, 9, 0]], [[2, 1, 3, 0]]],
+  ['Pengisian kapasitor (RC)', [['V', 4, 9, 3, 9], ['S', 4, 6, 0], ['R', 7, 6, 0, 1000], ['C', 10, 6, 1, 1e-4], ['G', 4, 9, 0]], [[3, 1, 4, 0]]],
+  ['Penyearah setengah gelombang', [['A', 4, 9, 3, 5], ['J', 4, 6, 0], ['R', 7, 6, 1, 1000], ['C', 10, 6, 1, 1e-5], ['G', 4, 9, 0]], [[2, 0, 3, 0], [3, 1, 2, 1], [2, 1, 4, 0]]]
 ];
 
 const S = {
   comps: [],
   wires: [],
+  links: {},
+  nid: 0,
   tool: 'sel',
   sel: null,
   selWire: null,
   rot: 0,
   run: true,
   t: 0,
-  ws: null,
   dt: 1e-4,
   hist: [],
   U: [],
   R: [],
   real: true,
   pv: null,
-  rc: [3, 6, 0, 2]
+  rc: [3, 6, 0, 2],
+  wd: null,
+  hv: null
 };
+const WP = () => S.wires.flatMap(w => [w[0], w[1]]);
 let net = null;
 
 function fmt(x, u) {
@@ -884,120 +889,150 @@ function onSeg(p, a, b) {
          p[1] >= Math.min(a[1], b[1]) && p[1] <= Math.max(a[1], b[1]);
 }
 
-function findPinAt(px, py, radius = 18) {
-  // 1. Cek semua pin/terminal komponen
+// ---------- Kabel: tautan pin-ke-pin + rute otomatis ----------
+const cb = id => S.comps.find(c => c.id == id);
+const lp = e => {
+  if (e.c == null) return e.p;
+  const c = cb(e.c);
+  return c ? term(c)[e.t] : null;
+};
+const linksOf = id => Object.keys(S.links).filter(k => S.links[k].a.c == id || S.links[k].b.c == id).map(Number);
+
+// Dijkstra di grid: ortogonal, menghindari badan komponen, kaki komponen lain, dan ujung kabel lain
+function route(a, b) {
+  const ka = K(a), kb = K(b);
+  if (ka == kb) return [a];
+  const blk = new Set(), pen = new Set(), xs = [a[0], b[0]], ys = [a[1], b[1]], bk = (x, y) => blk.add(x + ',' + y);
   for (const c of S.comps) {
+    const d = D[c.r];
+    if (c.t == 'G') bk(c.x - d[1], c.y + d[0]);
+    else { bk(c.x + d[0], c.y + d[1]); bk(c.x + 2 * d[0], c.y + 2 * d[1]); }
     for (const p of term(c)) {
-      if (Math.hypot(px - p[0] * G, py - p[1] * G) < radius) {
-        return { pt: [p[0], p[1]], isComp: true, comp: c };
-      }
+      xs.push(p[0]); ys.push(p[1]);
+      if (K(p) != ka && K(p) != kb) blk.add(K(p));
     }
   }
-  // 2. Cek titik sudut kabel yang sudah ada
   for (const w of S.wires) {
     for (const p of [w[0], w[1]]) {
-      if (Math.hypot(px - p[0] * G, py - p[1] * G) < radius) {
-        return { pt: [p[0], p[1]], isComp: false, wire: w };
+      xs.push(p[0]); ys.push(p[1]);
+      if (K(p) != ka && K(p) != kb) blk.add(K(p));
+    }
+    const dx = Math.sign(w[1][0] - w[0][0]), dy = Math.sign(w[1][1] - w[0][1]);
+    if ((!dx || !dy) && (dx || dy)) {
+      for (let x = w[0][0] + dx, y = w[0][1] + dy; x != w[1][0] || y != w[1][1]; x += dx, y += dy) pen.add(x + ',' + y);
+    }
+  }
+  const x0 = Math.min(...xs) - 4, x1 = Math.max(...xs) + 4, y0 = Math.min(...ys) - 4, y1 = Math.max(...ys) + 4;
+  const dist = new Map(), prev = new Map(), h = [], sk = (x, y, d) => x + ',' + y + ',' + d;
+  const push = (f, s) => {
+    h.push([f, s]);
+    let i = h.length - 1;
+    while (i) {
+      const p = (i - 1) >> 1;
+      if (h[p][0] <= h[i][0]) break;
+      [h[p], h[i]] = [h[i], h[p]];
+      i = p;
+    }
+  };
+  const pop = () => {
+    const t = h[0], l = h.pop();
+    if (h.length) {
+      h[0] = l;
+      let i = 0;
+      for (;;) {
+        let m = i;
+        const a = 2 * i + 1, b = a + 1;
+        if (a < h.length && h[a][0] < h[m][0]) m = a;
+        if (b < h.length && h[b][0] < h[m][0]) m = b;
+        if (m == i) break;
+        [h[m], h[i]] = [h[i], h[m]];
+        i = m;
       }
+    }
+    return t;
+  };
+  dist.set(sk(a[0], a[1], 4), 0);
+  push(0, [a[0], a[1], 4]);
+  let goal = null, it = 0;
+  while (h.length && it++ < 40000) {
+    const [f, [x, y, d]] = pop(), k = sk(x, y, d);
+    if (f > dist.get(k)) continue;
+    if (x == b[0] && y == b[1]) { goal = k; break; }
+    for (let n = 0; n < 4; n++) {
+      const nx = x + D[n][0], ny = y + D[n][1];
+      if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
+      const nk = nx + ',' + ny;
+      if (blk.has(nk)) continue;
+      const turn = d != 4 && n != d;
+      if (turn && pen.has(x + ',' + y)) continue;
+      const c = f + 1 + (turn ? 3 : 0) + (pen.has(nk) ? 10 : 0), s = sk(nx, ny, n);
+      if (c < (dist.get(s) ?? 1e9)) { dist.set(s, c); prev.set(s, k); push(c, [nx, ny, n]); }
+    }
+  }
+  if (!goal) return [a, [b[0], a[1]], b];
+  const pts = [];
+  for (let k = goal; k; k = prev.get(k)) {
+    const [x, y] = k.split(',').map(Number);
+    pts.push([x, y]);
+  }
+  pts.reverse();
+  const o = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i - 1], q = pts[i], r = pts[i + 1];
+    if ((q[0] - p[0]) * (r[1] - q[1]) != (q[1] - p[1]) * (r[0] - q[0])) o.push(q);
+  }
+  o.push(pts[pts.length - 1]);
+  return o;
+}
+
+function reroute(ids) {
+  S.wires = S.wires.filter(w => !ids.includes(w[2]));
+  for (const id of ids) {
+    const L = S.links[id];
+    if (!L) continue;
+    const a = lp(L.a), b = lp(L.b);
+    if (!a || !b) { delete S.links[id]; continue; }
+    const p = route(a, b);
+    for (let i = 0; i + 1 < p.length; i++) S.wires.push([p[i], p[i + 1], id]);
+  }
+}
+
+// Pin komponen terdekat dari titik kanvas
+const near = (px, py) => {
+  let r = null;
+  for (const c of S.comps) {
+    term(c).forEach((p, i) => {
+      if (!(c.t == 'G' && i == 1) && Math.hypot(px - p[0] * G, py - p[1] * G) < 10) r = { c, t: i, p };
+    });
+  }
+  return r;
+};
+
+// Tujuan sambungan: pin komponen lain, atau titik di tengah kabel yang sudah ada
+function target(px, py, c0, t0) {
+  let best = null, bd = 14;
+  for (const c of S.comps) {
+    term(c).forEach((p, t) => {
+      if ((c === c0 && t == t0) || (c.t == 'G' && t == 1)) return;
+      const d = Math.hypot(px - p[0] * G, py - p[1] * G);
+      if (d < bd) { bd = d; best = { c: c.id, t, p }; }
+    });
+  }
+  if (best) return best;
+  const gx = Math.round(px / G), gy = Math.round(py / G), p = [gx, gy];
+  if (Math.hypot(px - gx * G, py - gy * G) < 10) {
+    for (const w of S.wires) {
+      if ((w[0][0] == w[1][0] || w[0][1] == w[1][1]) && onSeg(p, w[0], w[1])) return { p };
     }
   }
   return null;
 }
 
-function addOrthogonalWire(a, b) {
-  if (a[0] === b[0] || a[1] === b[1]) {
-    S.wires.push([[a[0], a[1]], [b[0], b[1]]]);
-  } else {
-    const m = [b[0], a[1]];
-    S.wires.push([[a[0], a[1]], m], [m, [b[0], b[1]]]);
-  }
-}
-
-function simplifyWires() {
-  if (S.dragCorner) return;
-
-  // 1. Hapus kabel dengan panjang 0 dan duplikat persis
-  for (let i = S.wires.length - 1; i >= 0; i--) {
-    const w = S.wires[i];
-    if (w[0][0] === w[1][0] && w[0][1] === w[1][1]) {
-      if (S.selWire === w) S.selWire = null;
-      S.wires.splice(i, 1);
-      continue;
-    }
-    for (let j = 0; j < i; j++) {
-      const o = S.wires[j];
-      if ((w[0][0] === o[0][0] && w[0][1] === o[0][1] && w[1][0] === o[1][0] && w[1][1] === o[1][1]) ||
-          (w[0][0] === o[1][0] && w[0][1] === o[1][1] && w[1][0] === o[0][0] && w[1][1] === o[0][1])) {
-        if (S.selWire === w) S.selWire = o;
-        S.wires.splice(i, 1);
-        break;
-      }
-    }
-  }
-
-  // 2. Gabungkan segmen-segmen lurus kolinear menjadi satu kabel utuh
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const compTerms = S.comps.flatMap(term);
-    const isCompTerm = p => compTerms.some(t => t[0] === p[0] && t[1] === p[1]);
-    const ptCount = {};
-    S.wires.forEach(w => {
-      [w[0], w[1]].forEach(p => {
-        const k = p[0] + ',' + p[1];
-        ptCount[k] = (ptCount[k] || 0) + 1;
-      });
-    });
-
-    for (let i = 0; i < S.wires.length; i++) {
-      for (let j = i + 1; j < S.wires.length; j++) {
-        const w1 = S.wires[i], w2 = S.wires[j];
-        let shared = null, other1 = null, other2 = null;
-
-        if (w1[0][0] === w2[0][0] && w1[0][1] === w2[0][1]) {
-          shared = w1[0]; other1 = w1[1]; other2 = w2[1];
-        } else if (w1[0][0] === w2[1][0] && w1[0][1] === w2[1][1]) {
-          shared = w1[0]; other1 = w1[1]; other2 = w2[0];
-        } else if (w1[1][0] === w2[0][0] && w1[1][1] === w2[0][1]) {
-          shared = w1[1]; other1 = w1[0]; other2 = w2[1];
-        } else if (w1[1][0] === w2[1][0] && w1[1][1] === w2[1][1]) {
-          shared = w1[1]; other1 = w1[0]; other2 = w2[0];
-        }
-
-        if (!shared) continue;
-        if (isCompTerm(shared)) continue;
-
-        const sk = shared[0] + ',' + shared[1];
-        if (ptCount[sk] !== 2) continue;
-
-        const dx1 = shared[0] - other1[0], dy1 = shared[1] - other1[1];
-        const dx2 = other2[0] - shared[0], dy2 = other2[1] - shared[1];
-
-        // Uji kolinearitas (cross product = 0)
-        if (dx1 * dy2 - dy1 * dx2 !== 0) continue;
-        // Uji arah searah (tidak melipat balik)
-        if (dx1 * dx2 + dy1 * dy2 < 0) continue;
-
-        const mergedWire = [other1, other2];
-        if (S.selWire === w1 || S.selWire === w2) {
-          S.selWire = mergedWire;
-        }
-        S.wires.splice(j, 1);
-        S.wires.splice(i, 1, mergedWire);
-        changed = true;
-        break;
-      }
-      if (changed) break;
-    }
-  }
-}
-
 function build() {
-  simplifyWires();
   const par = {}, f = k => par[k] === k ? k : (par[k] = f(par[k])), add = k => { if (!(k in par)) par[k] = k; };
   S.comps.forEach(c => term(c).forEach(p => add(K(p))));
   S.wires.forEach(w => { add(K(w[0])); add(K(w[1])); par[f(K(w[0]))] = f(K(w[1])); });
-  for (const p of [...S.comps.flatMap(term), ...S.wires.flat()]) {
+  for (const p of [...S.comps.flatMap(term), ...WP()]) {
     for (const w of S.wires) {
       if (onSeg(p, w[0], w[1])) par[f(K(p))] = f(K(w[0]));
     }
@@ -1138,12 +1173,8 @@ function setTool(t) {
     return;
   }
   S.tool = t;
-  S.ws = null;
   S.pv = null;
-  S.wireStart = null;
-  S.wireCurrent = null;
-  S.hoverPin = null;
-  S.reconnectingWire = null;
+  S.wd = null;
   ui();
 }
 
@@ -1151,240 +1182,110 @@ cv.addEventListener('pointerdown', e => {
   const [px, py] = wp(e);
   const gx = Math.round(px / G);
   const gy = Math.round(py / G);
-  const t = S.tool;
 
-  if (t == 'sel') {
-    // 1. Jika kabel sedang terpilih, periksa interaksi pada titik-titiknya
-    if (S.selWire) {
-      const w = S.selWire;
-      const p0 = [w[0][0] * G, w[0][1] * G];
-      const p1 = [w[1][0] * G, w[1][1] * G];
-      const pm = [(w[0][0] + w[1][0]) / 2 * G, (w[0][1] + w[1][1]) / 2 * G];
-
-      // A. Klik titik kuning di tengah untuk membengkokkan kabel (re-route)
-      if (Math.hypot(px - pm[0], py - pm[1]) < 12) {
-        snap();
-        const midGrid = [gx, gy];
-        const w1 = [w[0], midGrid];
-        const w2 = [midGrid, w[1]];
-        const idx = S.wires.indexOf(w);
-        if (idx >= 0) S.wires.splice(idx, 1, w1, w2);
-        S.selWire = w1;
-        S.dragCorner = { pts: [w1[1], w2[0]] };
-        build();
-        ui();
-        return;
-      }
-
-      // B. Klik salah satu ujung kabel untuk dipindahkan ke pin lain
-      let clickedEndIdx = -1;
-      if (Math.hypot(px - p0[0], py - p0[1]) < 12) clickedEndIdx = 0;
-      else if (Math.hypot(px - p1[0], py - p1[1]) < 12) clickedEndIdx = 1;
-
-      if (clickedEndIdx >= 0) {
-        snap();
-        S.reconnectingWire = {
-          wire: w,
-          endIdx: clickedEndIdx,
-          origPos: [w[clickedEndIdx][0], w[clickedEndIdx][1]]
-        };
-        return;
-      }
-    }
-
-    // 2. Periksa apakah komponen diklik
-    const c = hit(px, py) || null;
-    if (c) {
-      if (c !== S.sel) S.hist = [];
-      S.sel = c;
-      S.selWire = null;
-      const T0 = term(c);
-      S.drag = { c, o: [gx - c.x, gy - c.y], ep: [...new Set(S.wires.flat().filter(p => T0.some(q => q[0] == p[0] && q[1] == p[1])))] };
-      ui();
-      return;
-    }
-
-    // 3. Periksa apakah kabel diklik untuk dipilih
-    const wireIdx = S.wires.findIndex(w => dseg(px, py, w[0][0] * G, w[0][1] * G, w[1][0] * G, w[1][1] * G) < 10);
-    if (wireIdx >= 0) {
-      S.sel = null;
-      S.selWire = S.wires[wireIdx];
-      ui();
-      return;
-    }
-
-    // 4. Klik kanvas kosong -> Pan dan batalkan seleksi
-    S.sel = null;
-    S.selWire = null;
-    S.pan = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y };
-    ui();
-  } else if (t == 'wire') {
-    const pin = findPinAt(px, py);
-    if (!S.wireStart) {
-      if (!pin) {
-        note('Mulai tarik kabel dari pin komponen');
-        return;
-      }
-      // Mulai kabel dari pin ini
-      S.wireStart = [pin.pt[0], pin.pt[1]];
-      S.wireCurrent = [gx, gy];
-      S.pointerDownPos = [px, py];
-      S.isDraggingWire = true;
-    } else {
-      // Mode Tap-Tap: klik pin tujuan kedua
-      if (pin && (pin.pt[0] !== S.wireStart[0] || pin.pt[1] !== S.wireStart[1])) {
-        snap();
-        addOrthogonalWire(S.wireStart, pin.pt);
-        build();
-        note('Kabel tersambung');
-        S.wireStart = S.wireCurrent = S.hoverPin = null;
-        setTool('sel');
-      } else if (pin && pin.pt[0] === S.wireStart[0] && pin.pt[1] === S.wireStart[1]) {
-        S.wireStart = S.wireCurrent = S.hoverPin = null;
-      } else {
-        note('Kabel dibatalkan: harus disambungkan ke pin komponen');
-        S.wireStart = S.wireCurrent = S.hoverPin = null;
-      }
-    }
-    draw();
-    ui();
-    return;
-  } else {
-    // Penempatan komponen baru
+  // Mode menaruh komponen (setelah Pick Parts)
+  if (S.tool != 'sel') {
     snap();
-    const c = { t, x: gx, y: gy, r: S.rot, val: S.pv ?? T[t].v, f: T[t].f, on: true };
+    const c = { id: ++S.nid, t: S.tool, x: gx, y: gy, r: S.rot, val: S.pv ?? T[S.tool].v, f: T[S.tool].f, on: true };
     S.comps.push(c);
     S.sel = c;
     S.selWire = null;
     S.hist = [];
     build();
     setTool('sel');
+    return;
   }
+
+  // 1. Tekan di pin komponen -> mulai tarik kabel
+  const th = near(px, py);
+  if (th) {
+    S.wd = { c: th.c, t: th.t, from: th.p, cur: [px, py], tg: null, path: null, key: '' };
+    return;
+  }
+
+  // 2. Tekan di komponen -> pilih dan siap digeser
+  const c = hit(px, py);
+  if (c) {
+    if (c !== S.sel) S.hist = [];
+    S.sel = c;
+    S.selWire = null;
+    S.drag = { c, o: [gx - c.x, gy - c.y] };
+    ui();
+    return;
+  }
+
+  // 3. Tekan di kabel -> pilih (kabel tidak bisa digeser)
+  const w = S.wires.find(w => dseg(px, py, w[0][0] * G, w[0][1] * G, w[1][0] * G, w[1][1] * G) < 10);
+  S.sel = null;
+  S.selWire = w || null;
+  if (!w) S.pan = { x: e.clientX, y: e.clientY, vx: V.x, vy: V.y };
   ui();
 });
 
 addEventListener('pointermove', e => {
-  const [px, py] = wp(e);
-  const gx = Math.round(px / G);
-  const gy = Math.round(py / G);
-
-  // 1. Preview penarikan kabel (mode Wire)
-  if (S.tool == 'wire' && S.wireStart) {
-    S.wireCurrent = [gx, gy];
-    const pin = findPinAt(px, py);
-    S.hoverPin = (pin && (pin.pt[0] !== S.wireStart[0] || pin.pt[1] !== S.wireStart[1])) ? pin.pt : null;
-    draw();
-    return;
-  }
-
-  // 2. Pemindahan ujung kabel ke pin lain
-  if (S.reconnectingWire) {
-    const { wire, endIdx } = S.reconnectingWire;
-    wire[endIdx][0] = gx;
-    wire[endIdx][1] = gy;
-    const pin = findPinAt(px, py);
-    const otherEnd = wire[1 - endIdx];
-    S.hoverPin = (pin && (pin.pt[0] !== otherEnd[0] || pin.pt[1] !== otherEnd[1])) ? pin.pt : null;
-    draw();
-    return;
-  }
-
-  // 3. Pergeseran sudut belokan kabel
-  if (S.dragCorner) {
-    let moved = false;
-    S.dragCorner.pts.forEach(p => {
-      if (p[0] !== gx || p[1] !== gy) {
-        p[0] = gx;
-        p[1] = gy;
-        moved = true;
-      }
-    });
-    if (moved) build();
-    return;
-  }
-
-  // 4. Pan kanvas
   if (S.pan) {
     V.x = S.pan.vx + e.clientX - S.pan.x;
     V.y = S.pan.vy + e.clientY - S.pan.y;
     return;
   }
-
-  // 5. Pergeseran komponen beserta kabel yang menempel
-  const d = S.drag;
-  if (!d) return;
-  const nx = Math.round(px / G) - d.o[0], ny = Math.round(py / G) - d.o[1];
-  const dx = nx - d.c.x, dy = ny - d.c.y;
-  if (!dx && !dy) return;
-  if (!d.s) { d.s = 1; snap(); }
-  d.ep.forEach(p => { p[0] += dx; p[1] += dy; });
-  d.c.x = nx; d.c.y = ny;
-  build();
-});
-
-addEventListener('pointerup', e => {
-  const [px, py] = wp(e);
-
-  // Jika sedang memindahkan ujung kabel ke pin lain
-  if (S.reconnectingWire) {
-    const { wire, endIdx, origPos } = S.reconnectingWire;
-    const pin = findPinAt(px, py);
-    const otherEnd = wire[1 - endIdx];
-    if (pin && (pin.pt[0] !== otherEnd[0] || pin.pt[1] !== otherEnd[1])) {
-      snap();
-      wire[endIdx][0] = pin.pt[0];
-      wire[endIdx][1] = pin.pt[1];
-      simplifyWires();
-      build();
-      note('Kabel berhasil dipindah ke pin baru');
-    } else {
-      // Tidak menyentuh pin -> kembalikan ke kondisi semula!
-      wire[endIdx][0] = origPos[0];
-      wire[endIdx][1] = origPos[1];
-      build();
-      note('Batal dipindah: kabel kembali ke posisi semula');
+  const w = S.wd;
+  if (w) {
+    const [px, py] = wp(e);
+    w.cur = [px, py];
+    const tg = target(px, py, w.c, w.t), k = tg ? JSON.stringify(tg.p) : '';
+    if (k != w.key) {
+      w.key = k;
+      w.tg = tg;
+      w.path = tg ? route(w.from, tg.p) : null;
     }
-    S.reconnectingWire = null;
-    S.hoverPin = null;
-    draw();
-    ui();
     return;
   }
-
-  // Jika sedang menarik kabel dengan klik-geser (drag-and-drop)
-  if (S.tool == 'wire' && S.isDraggingWire && S.wireStart) {
-    S.isDraggingWire = false;
-    const dist = S.pointerDownPos ? Math.hypot(px - S.pointerDownPos[0], py - S.pointerDownPos[1]) : 0;
-    if (dist > 12) {
-      const pin = findPinAt(px, py);
-      if (pin && (pin.pt[0] !== S.wireStart[0] || pin.pt[1] !== S.wireStart[1])) {
-        snap();
-        addOrthogonalWire(S.wireStart, pin.pt);
-        build();
-        note('Kabel tersambung');
-        S.wireStart = S.wireCurrent = S.hoverPin = null;
-        setTool('sel');
-      } else {
-        note('Dibatalkan: lepas di pin komponen tujuan');
-        S.wireStart = S.wireCurrent = S.hoverPin = null;
-      }
-      draw();
-      ui();
-      return;
-    }
-  }
-
-  const hadDrag = !!S.dragCorner;
-  S.drag = S.pan = S.dragCorner = null;
-  if (hadDrag) {
-    simplifyWires();
+  const d = S.drag;
+  if (d) {
+    const [px, py] = wp(e);
+    const nx = Math.round(px / G) - d.o[0], ny = Math.round(py / G) - d.o[1];
+    if (nx == d.c.x && ny == d.c.y) return;
+    if (!d.s) { d.s = 1; snap(); }
+    d.c.x = nx; d.c.y = ny;
+    reroute(linksOf(d.c.id));
     build();
-    ui();
+    return;
+  }
+  if (e.target === cv) {
+    const [px, py] = wp(e), h = near(px, py);
+    S.hv = h ? h.p : null;
+    cv.style.cursor = h ? 'crosshair' : '';
   }
 });
 
+addEventListener('pointerup', () => {
+  const w = S.wd;
+  S.wd = null;
+  S.drag = S.pan = null;
+  if (w && w.tg) {
+    const a = { c: w.c.id, t: w.t };
+    const b = w.tg.c != null ? { c: w.tg.c, t: w.tg.t } : { p: w.tg.p };
+    const pa = lp(a), pb = lp(b);
+    if (K(pa) == K(pb)) { note('Sudah terhubung'); return; }
+    snap();
+    const id = ++S.nid;
+    S.links[id] = { a, b };
+    reroute([id]);
+    const seg = S.wires.find(x => x[2] == id);
+    S.selWire = seg || null;
+    S.sel = null;
+    build();
+    ui();
+    note('Kabel tersambung');
+  } else if (w) {
+    note('Lepas di pin komponen tujuan untuk menyambung');
+  }
+});
+
+const state = () => JSON.stringify({ c: S.comps, w: S.wires, l: S.links, n: S.nid });
+
 const snap = () => {
-  S.U.push(JSON.stringify({ c: S.comps, w: S.wires }));
+  S.U.push(state());
   if (S.U.length > 50) S.U.shift();
   S.R = []; // Clear redo stack on new action
 };
@@ -1398,17 +1299,20 @@ function restore(j) {
   const o = JSON.parse(j);
   S.comps = o.c;
   S.wires = o.w;
+  S.links = o.l || {};
+  S.nid = Math.max(S.nid, o.n || 0);
+  S.comps.forEach(c => { if (c.id == null) c.id = ++S.nid; });
   S.sel = null;
   S.selWire = null;
   S.drag = null;
-  S.dragCorner = null;
+  S.wd = null;
   build();
   ui();
 }
 
 function undo() {
   if (S.U.length) {
-    S.R.push(JSON.stringify({ c: S.comps, w: S.wires }));
+    S.R.push(state());
     if (S.R.length > 50) S.R.shift();
     restore(S.U.pop());
     note('Undo');
@@ -1419,7 +1323,7 @@ function undo() {
 
 function redo() {
   if (S.R.length) {
-    S.U.push(JSON.stringify({ c: S.comps, w: S.wires }));
+    S.U.push(state());
     if (S.U.length > 50) S.U.shift();
     restore(S.R.pop());
     note('Redo');
@@ -1430,7 +1334,7 @@ function redo() {
 
 function save() {
   try {
-    localStorage.setItem('getsim', JSON.stringify({ c: S.comps, w: S.wires }));
+    localStorage.setItem('getsim', state());
     note('Rangkaian tersimpan di browser');
   } catch (e) {
     note('Gagal menyimpan');
@@ -1449,13 +1353,16 @@ function load() {
 
 function rot() {
   S.rot = (S.rot + 1) % 4;
-  if (S.sel) { snap(); S.sel.r = S.rot; build(); }
+  if (S.sel) { snap(); S.sel.r = S.rot; reroute(linksOf(S.sel.id)); build(); }
   ui();
 }
 
 function del() {
   if (S.sel) {
     snap();
+    const ids = linksOf(S.sel.id);
+    ids.forEach(k => delete S.links[k]);
+    S.wires = S.wires.filter(w => !ids.includes(w[2]));
     S.comps.splice(S.comps.indexOf(S.sel), 1);
     S.sel = null;
     build();
@@ -1463,8 +1370,13 @@ function del() {
     note('Komponen dihapus');
   } else if (S.selWire) {
     snap();
-    const idx = S.wires.indexOf(S.selWire);
-    if (idx >= 0) S.wires.splice(idx, 1);
+    const lid = S.selWire[2];
+    if (lid != null) {
+      delete S.links[lid];
+      S.wires = S.wires.filter(w => w[2] !== lid);
+    } else {
+      S.wires = S.wires.filter(w => w !== S.selWire);
+    }
     S.selWire = null;
     build();
     ui();
@@ -1476,9 +1388,13 @@ function del() {
 
 function exm(i) {
   snap();
-  S.comps = []; S.wires = [];
-  EX[i][1].forEach(([t, x, y, r, v, f]) => S.comps.push({ t, x, y, r, val: v ?? T[t].v, f: f ?? T[t].f, on: true, v: 0, i: 0, vd: 0 }));
-  EX[i][2].forEach(w => S.wires.push(w));
+  S.comps = []; S.wires = []; S.links = {};
+  EX[i][1].forEach(([t, x, y, r, v, f]) => S.comps.push({ id: ++S.nid, t, x, y, r, val: v ?? T[t].v, f: f ?? T[t].f, on: true, v: 0, i: 0, vd: 0 }));
+  EX[i][2].forEach(([a, ta, b, tb]) => {
+    const id = ++S.nid;
+    S.links[id] = { a: { c: S.comps[a].id, t: ta }, b: { c: S.comps[b].id, t: tb } };
+    reroute([id]);
+  });
   S.sel = null;
   S.selWire = null;
   V.z = 1; V.x = V.y = 0;
@@ -1490,12 +1406,11 @@ addEventListener('keydown', e => {
   if (e.key == 'Escape') {
     pick(0);
     $('#modal-help').hidden = true;
-    S.wireStart = S.wireCurrent = S.hoverPin = S.reconnectingWire = null;
-    draw();
+    S.wd = null;
+    if (S.tool != 'sel') setTool('sel');
   }
   if (!$('#pk').hidden || !$('#modal-help').hidden || e.target.tagName == 'INPUT' || e.target.tagName == 'SELECT') return;
   if (e.key == 'v' || e.key == 'V') setTool('sel');
-  if (e.key == 'w' || e.key == 'W') setTool('wire');
   if (e.key == 'r' || e.key == 'R') rot();
   if (e.key == ' ' || e.code == 'Space') { e.preventDefault(); S.run = !S.run; ui(); }
   if ((e.ctrlKey || e.metaKey) && (e.key == 'y' || e.key == 'Y' || (e.shiftKey && (e.key == 'z' || e.key == 'Z')))) {
@@ -1508,10 +1423,9 @@ addEventListener('keydown', e => {
   if (e.key == 'Delete' || e.key == 'Backspace') del();
 });
 
-// Render Tools
+// Render Tools (kabel dibuat dengan seret dari pin, jadi tidak ada alat Kabel)
 const TOOLS = [
   ['sel', 'Pilih', 'V'],
-  ['wire', 'Kabel', 'W'],
   ['rot', 'Putar', 'R'],
   ['del', 'Hapus', 'Del']
 ];
@@ -1593,7 +1507,7 @@ function usePart(i) {
   const p = PARTS[i];
   S.tool = p[0];
   S.pv = null; // Default value based on component
-  S.ws = null;
+  S.wd = null;
   S.rc = [i, ...S.rc.filter(x => x != i)].slice(0, 4);
   pick(0);
   rcb();
@@ -1605,6 +1519,12 @@ $('#pk').onclick = e => { if (e.target.id == 'pk') pick(0); };
 $('#modal-help').onclick = e => { if (e.target.id == 'modal-help') $('#modal-help').hidden = true; };
 
 $('#vw').onclick = () => { S.real = !S.real; ui(); };
+
+const pinName = e => {
+  if (e.c == null) return 'titik di kabel lain';
+  const c = cb(e.c);
+  return c ? `${T[c.t].n} (pin ${e.t + 1})` : '?';
+};
 
 function ui() {
   document.querySelectorAll('#main-tools [data-k]').forEach(b => b.classList.toggle('on', b.dataset.k == S.tool));
@@ -1630,9 +1550,9 @@ function ui() {
           Pilih komponen dari palet atau tombol <strong>Pick Parts</strong>, lalu letakkan di kanvas.
           <ul class="guide-list">
             <li>Menaruh komponen <b>otomatis beralih ke alat Pilih</b> agar tidak sengaja menaruh ganda.</li>
-            <li>Gunakan alat <strong>Kabel (W)</strong> untuk menghubungkan terminal.</li>
-            <li>Klik kabel untuk <b>membengkokkan rute</b> (tarik titik kuning di tengah).</li>
-            <li>Pilih komponen / kabel lalu tekan <strong>Hapus (Del)</strong> untuk menghapus.</li>
+            <li><b>Tekan dan seret dari pin</b> (titik biru di ujung komponen) ke pin komponen lain untuk menyambung kabel. Rutenya diatur otomatis.</li>
+            <li>Klik kabel atau komponen untuk memilihnya, lalu tekan <strong>Hapus (Del)</strong>.</li>
+            <li>Geser atau putar komponen: kabelnya ikut diroute ulang.</li>
           </ul>
         </div>
       </div>`;
@@ -1640,8 +1560,9 @@ function ui() {
   }
 
   // Selected Wire Inspector
-  if (w) {
+  if (!c && w) {
     $('#dso-comp-badge').textContent = 'Kabel';
+    const L = w[2] != null ? S.links[w[2]] : null;
     p.innerHTML = `
       <div class="card">
         <div class="card-header">
@@ -1649,10 +1570,9 @@ function ui() {
           <span style="font-size:11px; padding:2px 8px; border-radius:999px; background:var(--ac-subtle); color:var(--ac); font-weight:600;">Kabel</span>
         </div>
         <div class="guide-box">
-          Koordinat Ujung 1: <b>(${w[0][0]}, ${w[0][1]})</b><br>
-          Koordinat Ujung 2: <b>(${w[1][0]}, ${w[1][1]})</b><br>
+          ${L ? `Dari: <b>${pinName(L.a)}</b><br>Ke: <b>${pinName(L.b)}</b>` : 'Segmen kabel dari simpanan lama.'}
           <small style="color:var(--mu); display:block; margin-top:8px;">
-            💡 <b>Tips Re-route:</b> Seret titik bundar kuning di tengah kabel pada kanvas untuk membengkokkan jalur kabel.
+            Kabel diroute otomatis dan tidak bisa digeser. Untuk mengubah, hapus lalu seret kabel baru dari pin.
           </small>
         </div>
         <div style="margin-top:12px;">
@@ -1841,9 +1761,10 @@ function draw() {
     }
   }
 
-  // Wires
+  // Wires (seluruh rute satu kabel tersorot bersama)
+  const sw = S.selWire;
   S.wires.forEach(w => {
-    const isSel = (w === S.selWire);
+    const isSel = sw && (w === sw || (w[2] != null && w[2] === sw[2]));
     cx.beginPath();
     cx.moveTo(w[0][0] * G, w[0][1] * G);
     cx.lineTo(w[1][0] * G, w[1][1] * G);
@@ -1860,99 +1781,6 @@ function draw() {
     cx.stroke();
     cx.shadowBlur = 0;
   });
-
-  // Selected Wire Handles (Endpoints & Midpoint bend handle)
-  if (S.selWire) {
-    const w = S.selWire;
-    const p0 = [w[0][0] * G, w[0][1] * G];
-    const p1 = [w[1][0] * G, w[1][1] * G];
-    const pm = [(w[0][0] + w[1][0]) / 2 * G, (w[0][1] + w[1][1]) / 2 * G];
-
-    // Midpoint Bend Handle (Amber with white stroke)
-    cx.fillStyle = '#f59e0b';
-    cx.strokeStyle = '#ffffff';
-    cx.lineWidth = 2;
-    cx.beginPath();
-    cx.arc(pm[0], pm[1], 6, 0, 7);
-    cx.fill();
-    cx.stroke();
-
-    // Endpoints handles (Locked terminal or free corner)
-    const compTerms = S.comps.flatMap(term);
-    const isTerm0 = compTerms.some(t => t[0] === w[0][0] && t[1] === w[0][1]);
-    const isTerm1 = compTerms.some(t => t[0] === w[1][0] && t[1] === w[1][1]);
-
-    cx.strokeStyle = '#ffffff';
-    cx.lineWidth = 1.5;
-
-    // Endpoint 0
-    cx.fillStyle = isTerm0 ? '#64748b' : ac;
-    cx.beginPath();
-    cx.arc(p0[0], p0[1], isTerm0 ? 3.5 : 4.5, 0, 7);
-    cx.fill();
-    cx.stroke();
-
-    // Endpoint 1
-    cx.fillStyle = isTerm1 ? '#64748b' : ac;
-    cx.beginPath();
-    cx.arc(p1[0], p1[1], isTerm1 ? 3.5 : 4.5, 0, 7);
-    cx.fill();
-    cx.stroke();
-  }
-
-  // Active wire drawing preview
-  if (S.wireStart && S.wireCurrent) {
-    const target = S.hoverPin || S.wireCurrent;
-    cx.save();
-    cx.strokeStyle = S.hoverPin ? '#10b981' : ac;
-    cx.lineWidth = 2.6;
-    cx.setLineDash([4, 4]);
-
-    cx.beginPath();
-    const a = S.wireStart;
-    const b = target;
-    if (a[0] === b[0] || a[1] === b[1]) {
-      cx.moveTo(a[0] * G, a[1] * G);
-      cx.lineTo(b[0] * G, b[1] * G);
-    } else {
-      cx.moveTo(a[0] * G, a[1] * G);
-      cx.lineTo(b[0] * G, a[1] * G);
-      cx.lineTo(b[0] * G, b[1] * G);
-    }
-    cx.stroke();
-    cx.setLineDash([]);
-
-    // Starting pin marker
-    cx.fillStyle = wr;
-    cx.beginPath();
-    cx.arc(a[0] * G, a[1] * G, 5, 0, 7);
-    cx.fill();
-
-    // Target pin snap ring
-    if (S.hoverPin) {
-      cx.fillStyle = 'rgba(16, 185, 129, 0.35)';
-      cx.strokeStyle = '#10b981';
-      cx.lineWidth = 2;
-      cx.beginPath();
-      cx.arc(target[0] * G, target[1] * G, 10, 0, 7);
-      cx.fill();
-      cx.stroke();
-    }
-    cx.restore();
-  }
-
-  // Reconnecting wire snap ring
-  if (S.reconnectingWire && S.hoverPin) {
-    cx.save();
-    cx.fillStyle = 'rgba(37, 99, 235, 0.35)';
-    cx.strokeStyle = ac;
-    cx.lineWidth = 2;
-    cx.beginPath();
-    cx.arc(S.hoverPin[0] * G, S.hoverPin[1] * G, 10, 0, 7);
-    cx.fill();
-    cx.stroke();
-    cx.restore();
-  }
 
   // Components
   cx.lineWidth = 2;
@@ -2068,11 +1896,10 @@ function draw() {
     cx.restore();
   }
 
-  // Terminals
-  const isWireTool = S.tool == 'wire' || !!S.reconnectingWire;
+  // Terminals (halo di semua pin saat menarik kabel)
   for (const c of S.comps) {
     for (const p of term(c)) {
-      if (isWireTool) {
+      if (S.wd) {
         cx.fillStyle = 'rgba(37, 99, 235, 0.22)';
         cx.beginPath();
         cx.arc(p[0] * G, p[1] * G, 7, 0, 7);
@@ -2087,9 +1914,9 @@ function draw() {
 
   // Junction dots
   const cn = {};
-  S.wires.forEach(w => w.forEach(p => cn[K(p)] = (cn[K(p)] || 0) + 1));
+  WP().forEach(p => cn[K(p)] = (cn[K(p)] || 0) + 1);
   S.comps.forEach(c => term(c).forEach(p => cn[K(p)] = (cn[K(p)] || 0) + 1));
-  S.wires.forEach(w => [...S.comps.flatMap(term), ...S.wires.flat()].forEach(p => {
+  S.wires.forEach(w => [...S.comps.flatMap(term), ...WP()].forEach(p => {
     if (K(p) != K(w[0]) && K(p) != K(w[1]) && onSeg(p, w[0], w[1])) cn[K(p)] = (cn[K(p)] || 0) + 2;
   }));
   cx.fillStyle = wr;
@@ -2099,6 +1926,38 @@ function draw() {
       cx.beginPath();
       cx.arc(x * G, y * G, 5, 0, 7);
       cx.fill();
+    }
+  }
+
+  // Cincin pin saat kursor di atas pin, dan pratinjau kabel saat menarik
+  cx.strokeStyle = ac;
+  cx.lineWidth = 2;
+  if (S.hv && !S.wd) {
+    cx.beginPath();
+    cx.arc(S.hv[0] * G, S.hv[1] * G, 8, 0, 7);
+    cx.stroke();
+  }
+  const wd = S.wd;
+  if (wd) {
+    cx.save();
+    cx.strokeStyle = wd.tg ? '#10b981' : ac;
+    cx.lineWidth = 2.6;
+    cx.setLineDash([6, 5]);
+    cx.beginPath();
+    if (wd.path) wd.path.forEach((p, i) => i ? cx.lineTo(p[0] * G, p[1] * G) : cx.moveTo(p[0] * G, p[1] * G));
+    else { cx.moveTo(wd.from[0] * G, wd.from[1] * G); cx.lineTo(wd.cur[0], wd.cur[1]); }
+    cx.stroke();
+    cx.restore();
+    cx.beginPath();
+    cx.arc(wd.from[0] * G, wd.from[1] * G, 8, 0, 7);
+    cx.stroke();
+    if (wd.tg) {
+      cx.fillStyle = 'rgba(16, 185, 129, 0.35)';
+      cx.strokeStyle = '#10b981';
+      cx.beginPath();
+      cx.arc(wd.tg.p[0] * G, wd.tg.p[1] * G, 10, 0, 7);
+      cx.fill();
+      cx.stroke();
     }
   }
 
@@ -2192,9 +2051,10 @@ function loop() {
             S.comps.some(c => c.t == 'D' && c.i > .03) ? 'Peringatan: LED kelebihan arus (>30mA)' : '';
   const sb = $('#st');
   sb.className = w ? 'w' : '';
+  const idle = S.tool != 'sel' ? `Ketuk kanvas untuk menaruh ${T[S.tool].n} (Esc untuk batal)` : 'Kanvas Siap';
   sb.innerHTML = (S.note ? `<span>${S.note}</span>` : '') +
                  (w ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${w}` :
-                      (S.note ? '' : `<span style="color:var(--mu)">Kanvas Siap</span>`));
+                      (S.note ? '' : `<span style="color:var(--mu)">${idle}</span>`));
 
   const c = S.sel;
   if (c && $('#rv')) {

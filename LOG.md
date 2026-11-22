@@ -6,6 +6,31 @@
 
 ---
 
+## 2026-11-22: v1.5.0, Kabel dengan Tekan-Seret dari Pin, Rute Otomatis, Kabel Ikut Komponen (Claude)
+**Dasar**: dibangun di atas `index.html` v1.4.0 milik Antigravity (UI, DSO, redo, Pick Parts, label pill dipertahankan). Versi lokal Claude sebelumnya (dibangun dari v1.1.0) TIDAK diunggah agar fitur v1.2.0–v1.4.0 tidak tertimpa.
+
+**Dilakukan** (file: `index.html`, `LOG.md`)
+- **Alat Kabel dihapus.** Kabel dibuat dengan **menekan lalu menyeret dari pin (kaki) komponen ke pin komponen lain** langsung dalam mode Pilih. Boleh juga berakhir di titik pada kabel lain (sambungan T). Dilepas di area kosong = dibatalkan (tidak ada kabel menggantung). Pintasan `W` dihapus dari keyboard dan panduan.
+- **Rute otomatis** (pencarian jalur Dijkstra di grid): jalur siku-siku yang menghindari badan komponen (jadi tidak lagi menembus ke belakang komponen saat menyeret dari pin kanan ke kiri), kaki komponen lain, dan ujung kabel lain; persilangan dengan kabel lain dihindari bila ada jalan lain.
+- **Kabel disimpan sebagai tautan** (pin A ke pin B / titik kabel) berisi beberapa segmen. Saat komponen digeser atau diputar, kabel yang terhubung diroute ulang otomatis sehingga tidak ada lagi kabel diagonal atau kabel yang melintang jauh seperti pada tangkapan layar pengguna.
+- **Kabel tidak bisa digeser** ke area kosong: pegangan titik kuning (tekuk) dan pemindahan ujung kabel (v1.3.0/v1.4.0) dihapus. Kabel hanya bisa dipilih (seluruh rute tersorot biru), dihapus (tombol Hapus / Delete / Backspace), atau dibuat ulang. Panel Inspektor kabel kini menampilkan "Dari ... Ke ...".
+- Dihapus karena digantikan sistem tautan: `findPinAt`, `addOrthogonalWire`, `simplifyWires`, `dragCorner`, `reconnectingWire`, mode tap-tap.
+- Cincin penanda saat kursor di atas pin, pratinjau putus-putus berwarna hijau saat target valid, halo pada semua pin saat menarik kabel.
+- Undo/Redo, Simpan/Muat kini menyertakan tautan kabel dan id komponen. Simpanan lama (tanpa tautan/id) masih bisa dimuat (kabel lama tampil sebagai segmen tunggal).
+- Esc kini juga membatalkan mode menaruh komponen. Status kanvas menampilkan petunjuk saat mode menaruh aktif.
+- Contoh rangkaian diubah ke format tautan; badge versi menjadi v1.5.
+- Mesin simulasi tidak diubah.
+
+**Pengujian**
+- `node --check` lolos. Uji headless (Node, DOM dipalsukan): ketiga contoh rangkaian menghasilkan nilai wajar (LED 1,84 V / 21,7 mA; RC mengisi ke 8,84 V setelah 0,4 s); rute dari pin kanan ke pin kiri satu resistor melingkari badan komponen; menggeser dan memutar komponen berkabel tetap menghasilkan segmen siku-siku; hapus komponen menghapus kabelnya; undo/redo; memuat simpanan lama.
+- Interaksi pointer (seret di kanvas) dan tampilan belum diuji langsung di browser.
+
+**Catatan / keterbatasan**
+- Kabel yang berakhir di tengah kabel lain (sambungan T) bisa lepas jika kabel induknya diroute ulang karena komponen digeser.
+- `README.md` belum diperbarui di entri ini.
+
+---
+
 ## 2026-11-22: v1.4.0, Sistem Kabel Pin-ke-Pin, Live Route Preview, dan Revert Pemindahan Ujung (Antigravity)
 **Fitur & Peningkatan** (file: `index.html`)
 - Pengkabelan Pin-ke-Pin Tegas (*Strict Pin-to-Pin*): kabel kini hanya dapat dimulai dan diakhiri pada pin/terminal komponen atau sambungan kabel yang sah; dilarang membuat kabel mengambang di ruang kosong.
