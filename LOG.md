@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-11-22: v1.3.2, Perbaikan Bug Kabel Terputus Saat Digeser (Antigravity)
+**Bug diperbaiki** (file: `index.html`)
+- Ujung kabel yang terpasang pada terminal komponen (GND, Resistor, LED, Baterai, Saklar, dll.) kini terkunci kokoh dan tidak dapat ditarik lepas ke ruang kosong secara tidak sengaja.
+- Sambungan sudut antar-kabel kini digerakkan bersamaan (`dragCorner` dengan koleksi semua titik sambungan): ketika sudut kabel digeser, seluruh ujung kabel yang bertemu di titik tersebut bergerak bersama tanpa pernah terpisah/terputus.
+- Ujung kabel yang menempel di terminal komponen ditampilkan dengan indikator pin terkunci abu-abu, sedangkan sudut bebas antar-kabel dapat digeser fleksibel bersama.
+
+---
+
 ## 2026-11-22: v1.3.1, Penyatuan Otomatis Kabel Garis Lurus (Wire Coalescing) (Antigravity)
 **Dilakukan** (file: `index.html`)
 - Algoritma Penyatuan Kabel Kolinear (`simplifyWires`): setiap segmen kabel lurus yang bersambungan tanpa cabang (tidak ada komponen lain atau kabel ke-3 di titik temu) otomatis dilebur menjadi satu segmen kabel utuh.
