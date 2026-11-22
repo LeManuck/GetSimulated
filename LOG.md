@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-11-22: v1.4.0, Sistem Kabel Pin-ke-Pin, Live Route Preview, dan Revert Pemindahan Ujung (Antigravity)
+**Fitur & Peningkatan** (file: `index.html`)
+- Pengkabelan Pin-ke-Pin Tegas (*Strict Pin-to-Pin*): kabel kini hanya dapat dimulai dan diakhiri pada pin/terminal komponen atau sambungan kabel yang sah; dilarang membuat kabel mengambang di ruang kosong.
+- Dua Cara Penarikan Kabel: mendukung mode **Tap Pin-ke-Pin** (klik pin awal lalu klik pin tujuan) maupun **Klik-Geser (Drag-and-Drop)** dari pin ke pin.
+- Preview Rute Kabel Real-Time: saat kabel ditarik, jalur rute ortogonal (siku-siku) langsung ditampilkan secara transparan bersama cincin hijau snap pada pin tujuan yang didekati. Melepas di ruang kosong otomatis membatalkan penarikan tanpa meninggalkan kabel menggantung.
+- Pemindahan Ujung Kabel (*Endpoint Reconnecting with Revert*): saat salah satu ujung kabel pada komponen digeser, ujung tersebut dapat dipindahkan ke pin komponen lain. Jika tidak dilepas tepat di atas pin komponen yang sah, ujung kabel otomatis **kembali ke posisi semula** (tidak terputus).
+- Sorotan Pin Komponen: saat alat Kabel aktif, semua terminal komponen di kanvas diberi halo visual lembut agar pengguna dengan mudah melihat titik-titik sambungan yang tersedia.
+
+---
+
 ## 2026-11-22: v1.3.2, Perbaikan Bug Kabel Terputus Saat Digeser (Antigravity)
 **Bug diperbaiki** (file: `index.html`)
 - Ujung kabel yang terpasang pada terminal komponen (GND, Resistor, LED, Baterai, Saklar, dll.) kini terkunci kokoh dan tidak dapat ditarik lepas ke ruang kosong secara tidak sengaja.
