@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-11-22: v1.3.1, Penyatuan Otomatis Kabel Garis Lurus (Wire Coalescing) (Antigravity)
+**Dilakukan** (file: `index.html`)
+- Algoritma Penyatuan Kabel Kolinear (`simplifyWires`): setiap segmen kabel lurus yang bersambungan tanpa cabang (tidak ada komponen lain atau kabel ke-3 di titik temu) otomatis dilebur menjadi satu segmen kabel utuh.
+- Memastikan garis lurus selalu memiliki **hanya 1 titik tengah kuning**, sehingga tidak ada titik tengah ganda yang membingungkan pada satu garis lurus yang sama.
+- Jika kabel dibengkokkan lalu dikembalikan posisinya ke garis lurus, kedua segmen otomatis menyatu kembali menjadi 1 kabel utuh saat dilepas.
+
+---
+
 ## 2026-11-22: v1.3.0, Tombol Redo, Re-route Kabel, Hapus Berbasis Seleksi, Penyatuan Part (Antigravity)
 **Dilakukan** (file: `index.html`)
 - Tombol Redo: menggantikan tombol Putar di seksi Proyek (karena Putar sudah ada di Alat Kerja). Mendukung stack Redo dan pintasan `Ctrl+Y` / `Ctrl+Shift+Z`.
