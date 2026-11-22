@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-11-22: v1.2.0, Redesain UI/UX modern workbench ala Wokwi/Tinkercad, DSO Osiloskop, Pill Labels (Antigravity)
+**Dilakukan** (file: `index.html`)
+- Header modern: brand GetSimulated dengan badge v1.2, Simulation Control Hub di tengah (Play/Pause dengan status LED pulse, digital clock, dropdown resolusi waktu simulasi), tombol beralih tema, tombol panduan pintasan keyboard.
+- Toolbar kiri (Tool dock): alat kerja (Pilih [V], Kabel [W], Putar [R], Hapus [Del]) bergaya segmented dock dengan indikator shortcut, tombol Pick Parts beraksen menonjol, dan mini-bar aksi proyek (Undo [Ctrl+Z], Simpan, Muat, Reset).
+- Label nilai kanvas: ditambahkan rounded pill badge semi-transparan di belakang teks nilai tegangan dan arus agar selalu terbaca jelas dan tidak bertubrukan dengan kabel.
+- Grid kanvas: titik grid disempurnakan dengan penanda divisi mayor bergaya alas kerja teknik (engineering mat).
+- Digital Oscilloscope (DSO): latar CRT gelap dengan garis graticule pembagi horizontal & vertikal, crosshair tengah, sinyal jejak ber-glow cyan phosphor, serta telemetri Vpp dan Max real-time.
+- Panel Inspektor: instrumen Digital Multi-Meter (DMM) dengan font monospace angka tabular (tegangan, arus, daya), kontrol nilai komponen yang lebih responsif.
+- Modal Pick Parts: modal dengan backdrop blur, pencarian instan, dan filter kategori berbasis pill.
+- Pintasan keyboard: V, W, R, Delete/Backspace, Spasi (Play/Pause), Ctrl+Z (Undo), Esc.
+- Mesin simulasi (MNA, Euler backward, Newton-Raphson) 100% dipertahankan dan kompatibel penuh.
+
+---
+
 ## 2026-11-22: v1.1.0, Pick parts, tampilan Gambar, panduan GitHub Pages (Claude)
 **Dilakukan** (file: `index.html`, `README.md`)
 - Menu **Pick parts**: lembar pemilih komponen dengan kotak pencarian (cocok dengan nama, kata kunci Indonesia/Inggris, dan kode seperti 1N4148) dan kategori Daya / Pasif / Semikonduktor / Kontrol. LED dan dioda muncul per varian (warna / kode) sehingga langsung terpasang dengan nilai yang benar.
