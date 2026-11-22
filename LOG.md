@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-11-22: v1.3.0, Tombol Redo, Re-route Kabel, Hapus Berbasis Seleksi, Penyatuan Part (Antigravity)
+**Dilakukan** (file: `index.html`)
+- Tombol Redo: menggantikan tombol Putar di seksi Proyek (karena Putar sudah ada di Alat Kerja). Mendukung stack Redo dan pintasan `Ctrl+Y` / `Ctrl+Shift+Z`.
+- Auto-Pilih: menaruh komponen ke kanvas kini otomatis beralih kembali ke alat Pilih (`sel`), mencegah penempatan duplikat tak sengaja dan memudahkan langsung memindah/menginspeksi.
+- Seleksi & Re-route Kabel: kabel di kanvas kini bisa diklik/dipilih. Muncul 3 pegangan seleksi (ujung 1, titik tengah kuning, ujung 2). Menyeret titik kuning di tengah otomatis membengkokkan kabel menjadi dua segmen siku-siku.
+- Hapus Berbasis Seleksi: tombol Hapus di Alat Kerja serta tombol `Delete` / `Backspace` kini langsung menghapus komponen atau kabel yang sedang aktif terpilih.
+- Penyatuan Part: varian LED (Merah, Kuning, Hijau, Biru) dan Dioda (1N4148, 1N4007, 1N5819, BAT54) disatukan menjadi 1 item "LED" dan 1 item "Dioda" di Pick Parts dan palet. Pemilihan warna LED atau tipe dioda dilakukan lewat panel Inspektor saat komponen dipilih di kanvas.
+
+---
+
 ## 2026-11-22: v1.2.0, Redesain UI/UX modern workbench ala Wokwi/Tinkercad, DSO Osiloskop, Pill Labels (Antigravity)
 **Dilakukan** (file: `index.html`)
 - Header modern: brand GetSimulated dengan badge v1.2, Simulation Control Hub di tengah (Play/Pause dengan status LED pulse, digital clock, dropdown resolusi waktu simulasi), tombol beralih tema, tombol panduan pintasan keyboard.
