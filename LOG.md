@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-11-22: v1.6.0, Kabel Bisa Ditekuk dan Dipindah Ujungnya (gaya Wokwi) (Claude)
+**Dilakukan** (file: `index.html`, `LOG.md`)
+- **Model kabel diubah menjadi daftar titik (polyline).** Tiap kabel (tautan pin-ke-pin) menyimpan titik-titik `pts`; segmen digambar dan dihitung secara listrik dari titik itu (`rebuildWires`). Titik dibagi dengan segmen sehingga menggeser titik langsung memperbarui gambar.
+- **Kabel terpilih punya pegangan**: ujung 1 dan 2 (lingkaran besar putih di pin), titik tekuk (titik biru), dan **titik tengah kecil di setiap garis lurus**.
+- **Menekuk kabel**: seret titik tengah sebuah garis untuk menyisipkan titik tekuk baru; garis terbagi dua dan masing-masing mendapat titik tengah sendiri sehingga bisa ditekuk lagi, tanpa batas. Segmen boleh miring (tidak dipaksa siku-siku), titik menempel ke grid.
+- **Menyatu kembali**: saat titik tekuk dilepas dan sudah sejajar dengan tetangganya (`tidy`), titik itu dihapus dan dua garis menyatu menjadi satu, sehingga hanya ada satu titik tengah.
+- **Memindah kabel dari pin ke pin**: seret ujung kabel (yang sedang menempel di pin) ke pin lain; selama menyeret tampil pratinjau rute otomatis putus-putus dan kabel asli memudar. Saat dilepas di pin lain, tautan berpindah dan kabel **diroute ulang otomatis** dari ujung satunya (berlaku untuk ujung 1 maupun 2). Dilepas di area kosong atau pin yang sama = tidak berubah. Dilarang jika kedua ujung berada di pin yang sama.
+- Menggeser atau memutar komponen tetap meroute ulang kabel yang terhubung (tekukan manual pada kabel itu direset).
+- Penyimpanan (undo/redo/simpan/muat) kini menyimpan `pts`. Simpanan v1.5 (tanpa `pts`) diroute ulang saat dimuat; simpanan v1.4 (segmen tunggal) diubah menjadi kabel dengan ujung bebas.
+- Badge versi v1.6; teks panduan, bantuan, dan Inspektor kabel diperbarui. Mesin simulasi tidak diubah.
+
+**Pengujian**
+- `node --check` lolos. Uji headless dengan simulasi event pointer: pilih kabel, tekuk lewat titik tengah, tekukan kedua, meluruskan kembali (kabel menyatu menjadi 1 segmen), memindah ujung ke pin lain (rute ortogonal), melepas ujung di area kosong (tidak berubah), geser komponen berkabel, undo/redo, memuat simpanan v1.5 dan v1.4, hapus kabel, serta simulasi (LED 1,84 V / 21,7 mA). Tampilan dan sentuhan di browser belum diuji langsung.
+
+**Catatan / keterbatasan**
+- Tekukan manual tidak dicek terhadap komponen lain: kabel yang ditekuk melewati pin komponen lain akan tersambung ke pin itu secara listrik.
+- Menggeser komponen meroute ulang dan menghapus tekukan manual pada kabel yang terhubung.
+- Kabel yang berakhir di tengah kabel lain (sambungan T) bisa lepas jika kabel induknya diroute ulang karena komponen digeser.
+- `README.md` belum diperbarui.
+
+---
+
 ## 2026-11-22: v1.5.0, Kabel dengan Tekan-Seret dari Pin, Rute Otomatis, Kabel Ikut Komponen (Claude)
 **Dasar**: dibangun di atas `index.html` v1.4.0 milik Antigravity (UI, DSO, redo, Pick Parts, label pill dipertahankan). Versi lokal Claude sebelumnya (dibangun dari v1.1.0) TIDAK diunggah agar fitur v1.2.0–v1.4.0 tidak tertimpa.
 
