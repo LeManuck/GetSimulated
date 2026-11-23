@@ -636,7 +636,7 @@ main {
       </svg>
     </div>
     <div class="brand-info">
-      <span class="brand-name">GetSimulated <span class="badge-ver">v1.6</span></span>
+      <span class="brand-name">GetSimulated <span class="badge-ver">v1.7</span></span>
       <span class="brand-sub">Simulator Rangkaian Elektronik</span>
     </div>
   </div>
@@ -801,13 +801,24 @@ const T = {
   V: { n: 'Baterai', u: 'V', v: 9, p: [1.5, 3, 3.3, 5, 9, 12] },
   A: { n: 'Sumber AC', u: 'V', v: 5, p: [1, 3, 5, 9, 12], f: 50, fp: [1, 10, 50, 60, 100, 500, 1000] },
   R: { n: 'Resistor', u: 'Ω', v: 330, p: [10, 100, 220, 330, 470, 1e3, 2200, 4700, 1e4, 1e5, 1e6] },
-  C: { n: 'Kapasitor', u: 'F', v: 1e-5, p: [1e-7, 1e-6, 1e-5, 1e-4, 4.7e-4, 1e-3] },
+  C: { n: 'Kapasitor', u: 'F', v: 1e-5 },
   L: { n: 'Induktor', u: 'H', v: .01, p: [1e-3, .01, .1, 1] },
   D: { n: 'LED', u: 'V', v: 1.8, p: [1.8, 2, 2.1, 3], nm: ['Merah', 'Kuning', 'Hijau', 'Biru'] },
   J: { n: 'Dioda', u: 'V', v: .72, p: [.72, .68, .3, .4], nm: ['1N4148', '1N4007', '1N5819', 'BAT54'] },
   S: { n: 'Saklar' },
   G: { n: 'GND' }
 };
+
+// Tipe kapasitor (disimpan di komponen sebagai c.ct). pol = berkutub: pin 1 = (+), pin 2 = (−). s = nama pendek di label kanvas.
+// Nilai kapasitansi diisi manual (bawaan 10µF); tipe hanya memengaruhi tampilan, bukan perhitungan.
+const CAPT = {
+  elco: { n: 'Elco (Elektrolit)', s: 'Elco', pol: true },
+  cer: { n: 'Keramik', s: 'Keramik', pol: false },
+  tan: { n: 'Tantalum', s: 'Tantalum', pol: true },
+  film: { n: 'Film / Mylar', s: 'Film', pol: false }
+};
+const capKey = c => CAPT[c.ct] ? c.ct : 'elco';
+const ctype = c => CAPT[capKey(c)];
 
 const TC = {
   V: '#ef4444', A: '#ef4444', R: '#f59e0b', C: '#3b82f6', L: '#8b5cf6', D: '#10b981', J: '#f97316', S: '#64748b', G: '#64748b'
@@ -1229,7 +1240,7 @@ cv.addEventListener('pointerdown', e => {
   // Mode menaruh komponen (setelah Pick Parts)
   if (S.tool != 'sel') {
     snap();
-    const c = { id: ++S.nid, t: S.tool, x: gx, y: gy, r: S.rot, val: S.pv ?? T[S.tool].v, f: T[S.tool].f, on: true };
+    const c = { id: ++S.nid, t: S.tool, x: gx, y: gy, r: S.rot, val: S.pv ?? T[S.tool].v, f: T[S.tool].f, on: true, ct: S.tool == 'C' ? 'elco' : undefined };
     S.comps.push(c);
     S.sel = c;
     S.sw = null;
@@ -1535,7 +1546,7 @@ function del() {
 function exm(i) {
   snap();
   S.comps = []; S.wires = []; S.links = {};
-  EX[i][1].forEach(([t, x, y, r, v, f]) => S.comps.push({ id: ++S.nid, t, x, y, r, val: v ?? T[t].v, f: f ?? T[t].f, on: true, v: 0, i: 0, vd: 0 }));
+  EX[i][1].forEach(([t, x, y, r, v, f]) => S.comps.push({ id: ++S.nid, t, x, y, r, val: v ?? T[t].v, f: f ?? T[t].f, on: true, v: 0, i: 0, vd: 0, ct: t == 'C' ? 'elco' : undefined }));
   EX[i][2].forEach(([a, ta, b, tb]) => {
     const id = ++S.nid;
     S.links[id] = { a: { c: S.comps[a].id, t: ta }, b: { c: S.comps[b].id, t: tb } };
@@ -1609,7 +1620,7 @@ const PARTS = [
   ['A', 'Sumber AC', 'Daya', 'ac sinus generator listrik bolak balik power'],
   ['G', 'GND', 'Daya', 'ground tanah referensi nol'],
   ['R', 'Resistor', 'Pasif', 'hambatan ohm resistance'],
-  ['C', 'Kapasitor', 'Pasif', 'kondensator capacitor farad'],
+  ['C', 'Kapasitor', 'Pasif', 'kondensator capacitor farad elco elektrolit electrolytic keramik ceramic tantalum film mylar mkt'],
   ['L', 'Induktor', 'Pasif', 'kumparan inductor coil henry'],
   ['D', 'LED', 'Semikonduktor', 'lampu led light diode emisi cahaya merah kuning hijau biru'],
   ['J', 'Dioda', 'Semikonduktor', 'diode penyearah 1n4148 1n4007 schottky 1n5819 bat54'],
@@ -1747,6 +1758,21 @@ function ui() {
     h += `<button class="${c.on ? 'on' : ''}" style="width:100%; min-height:36px;" onclick="S.sel.on=!S.sel.on;ui()">
             Status: ${c.on ? 'Tertutup (ON / Terhubung)' : 'Terbuka (OFF / Putus)'}
           </button>`;
+  } else if (c.t == 'C') {
+    // Kapasitor: selector hanya untuk tipe; kapasitansi diketik manual (bawaan 10µF)
+    const ck = capKey(c);
+    h += `<div class="prop-row">
+            <label>Tipe</label>
+            <select id="ctp">
+              ${Object.keys(CAPT).map(k => `<option value="${k}" ${k == ck ? 'selected' : ''}>${CAPT[k].n}</option>`).join('')}
+            </select>
+          </div>
+          <div class="prop-row">
+            <label>Kapasitansi</label>
+            <input id="iv" value="${fmt(c.val, '')}" placeholder="Contoh: 10u, 470n, 100p">
+            <span style="font-weight:600; min-width:20px;">${t.u}</span>
+          </div>
+          <small style="color:var(--mu); font-size:11px;">${CAPT[ck].pol ? 'Berkutub: pin 1 = (+), pin 2 = (−). Polaritas hanya tampilan, simulasi tidak membedakannya.' : 'Tidak berkutub (tanpa polaritas).'}</small>`;
   } else if (c.t != 'G') {
     const m = t.p.includes(c.val);
     h += `<div class="prop-row">
@@ -1795,13 +1821,16 @@ function ui() {
       if (e.target.value != 'x') { snap(); c.val = +e.target.value; ui(); }
       else $('#iv').focus();
     };
+  }
+  if ($('#iv')) {
     $('#iv').onchange = e => {
       const v = parse(e.target.value);
       if (v > 0) { snap(); c.val = v; }
       ui();
     };
-    if ($('#fv')) $('#fv').onchange = e => { c.f = +e.target.value; ui(); };
   }
+  if ($('#fv')) $('#fv').onchange = e => { c.f = +e.target.value; ui(); };
+  if ($('#ctp')) $('#ctp').onchange = e => { snap(); c.ct = e.target.value; ui(); };
 }
 
 function fit() {
@@ -1854,8 +1883,33 @@ function real(c, L, m) {
     cx.fillStyle = '#ef4444'; cx.fillRect(m - 6, -10, 8, 20);
     rr(m + 16, -4, 4, 8, 1, '#c8ccd4');
   } else if (t == 'C') {
-    ld(m - 10, m + 10); rr(m - 10, -12, 20, 24, 4, '#2563eb'); cx.shadowBlur = 0;
-    cx.fillStyle = '#cfe0ff'; cx.fillRect(m - 10, -12, 5, 24);
+    // Tanda polaritas digambar tegak (diputar balik) agar tetap terbaca saat komponen diputar
+    const lbl = (s, x, col, px) => {
+      cx.save(); cx.translate(x, 0); cx.rotate(-c.r * Math.PI / 2);
+      cx.font = `bold ${px}px system-ui`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+      cx.fillStyle = col; cx.fillText(s, 0, 0); cx.restore();
+    };
+    const ck = capKey(c);
+    if (ck == 'elco') {
+      // Elco: silinder biru, pita (−) di sisi pin 2, tanda (+) di sisi pin 1
+      ld(m - 12, m + 12); rr(m - 12, -11, 24, 22, 4, '#1e3a8a'); cx.shadowBlur = 0;
+      rr(m + 6, -11, 6, 22, [0, 4, 4, 0], '#cfd8e8');
+      lbl('−', m + 9, '#1e3a8a', 11);
+      lbl('+', m - 6, '#e2e8f0', 11);
+    } else if (ck == 'cer') {
+      // Keramik: cakram oranye
+      ld(m - 6, m + 6); rr(m - 6, -11, 12, 22, 6, '#e0a84a'); cx.shadowBlur = 0;
+      rr(m - 3, -7, 2, 14, 1, 'rgba(255,255,255,.4)');
+    } else if (ck == 'tan') {
+      // Tantalum: manik kuning, pita gelap dan tanda (+) di sisi pin 1
+      ld(m - 9, m + 9); rr(m - 9, -9, 18, 18, 7, '#f0b429'); cx.shadowBlur = 0;
+      rr(m - 9, -9, 6, 18, [7, 0, 0, 7], '#3b2a05');
+      lbl('+', m - 6, '#ffffff', 10);
+    } else {
+      // Film / Mylar: kotak merah
+      ld(m - 9, m + 9); rr(m - 9, -11, 18, 22, 3, '#d9452f'); cx.shadowBlur = 0;
+      rr(m - 9, -11, 4, 22, [3, 0, 0, 3], 'rgba(255,255,255,.3)');
+    }
   } else if (t == 'L') {
     ld(20, 52); rr(20, -8, 32, 16, 5, '#b87333'); cx.shadowBlur = 0;
     cx.strokeStyle = '#7a4a1c'; cx.lineWidth = 1.5; cx.beginPath();
@@ -1970,10 +2024,18 @@ function draw() {
       cx.rect(G, -7, G, 14);
       cx.moveTo(2 * G, 0); cx.lineTo(L, 0);
     } else if (c.t == 'C') {
-      cx.moveTo(0, 0); cx.lineTo(m - 3, 0);
-      cx.moveTo(m - 3, -12); cx.lineTo(m - 3, 12);
-      cx.moveTo(m + 3, -12); cx.lineTo(m + 3, 12);
-      cx.moveTo(m + 3, 0); cx.lineTo(L, 0);
+      if (ctype(c).pol) {
+        // Berkutub: plat lurus (+) di pin 1, plat lengkung (−) di pin 2
+        cx.moveTo(0, 0); cx.lineTo(m - 3, 0);
+        cx.moveTo(m - 3, -12); cx.lineTo(m - 3, 12);
+        cx.moveTo(m + 3, -12); cx.quadraticCurveTo(m + 9, 0, m + 3, 12);
+        cx.moveTo(m + 6, 0); cx.lineTo(L, 0);
+      } else {
+        cx.moveTo(0, 0); cx.lineTo(m - 3, 0);
+        cx.moveTo(m - 3, -12); cx.lineTo(m - 3, 12);
+        cx.moveTo(m + 3, -12); cx.lineTo(m + 3, 12);
+        cx.moveTo(m + 3, 0); cx.lineTo(L, 0);
+      }
     } else if (c.t == 'L') {
       cx.moveTo(0, 0); cx.lineTo(14, 0);
       for (let i = 0; i < 4; i++) cx.arc(20 + i * 12, 0, 6, Math.PI, 0);
@@ -2013,6 +2075,10 @@ function draw() {
       cx.fillText('+', L - 10, -8);
       cx.fillText('−', 4, -8);
     }
+    if (c.t == 'C' && !S.real && ctype(c).pol) {
+      cx.font = 'bold 11px system-ui';
+      cx.fillText('+', m - 14, -6);
+    }
     cx.restore();
 
     if (c.t == 'G') continue;
@@ -2023,7 +2089,8 @@ function draw() {
     const my = (c.y + d[1] * 1.5) * G;
     const hz = d[1] == 0;
     const nI = T[c.t].nm ? T[c.t].p.indexOf(c.val) : -1;
-    const l1 = c.t == 'S' ? (c.on ? 'ON' : 'OFF') : (nI >= 0 ? T[c.t].nm[nI] + ' ' : '') + fmt(c.val, T[c.t].u) + (c.t == 'A' ? ' ' + fmt(c.f, 'Hz') : '');
+    const pre = c.t == 'C' ? ctype(c).s + ' ' : nI >= 0 ? T[c.t].nm[nI] + ' ' : '';
+    const l1 = c.t == 'S' ? (c.on ? 'ON' : 'OFF') : pre + fmt(c.val, T[c.t].u) + (c.t == 'A' ? ' ' + fmt(c.f, 'Hz') : '');
     const l2 = fmt(c.v, 'V') + '  ' + fmt(c.i, 'A');
 
     cx.font = '600 11.5px ui-monospace, "SF Mono", Consolas, monospace';

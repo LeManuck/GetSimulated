@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-11-23: v1.7.0, Tipe Kapasitor (Elco, Keramik, Tantalum, Film) dengan Nilai Manual (Claude)
+**Dilakukan** (file: `index.html`, `README.md`, `LOG.md`)
+- Kapasitor kini punya **tipe**: Elco (elektrolit), Keramik, Tantalum, Film/Mylar. Dipilih lewat selector **Tipe** di Inspektor. Tipe disimpan di komponen (`ct`) sehingga ikut undo/redo, simpan/muat, dan contoh rangkaian (contoh RC dan penyearah memakai Elco). Komponen atau simpanan lama tanpa tipe dianggap Elco.
+- **Kapasitansi diisi manual** (selector nilai preset dihapus khusus kapasitor, `p` pada `T.C` dibuang). Nilai bawaan tetap **10 µF**. Akhiran SI sama seperti sebelumnya (p, n, u, m, ...).
+- Tampilan Gambar: Elco = silinder biru dengan pita (−) dan tanda (+); Keramik = cakram oranye; Tantalum = manik kuning dengan pita gelap dan tanda (+); Film/Mylar = kotak merah. Tanda (+)/(−) digambar tegak walau komponen diputar.
+- Tampilan Skema: Elco dan Tantalum memakai simbol berkutub (plat lurus = + di pin 1, plat lengkung = − di pin 2, plus tanda +); Keramik dan Film tetap dua plat lurus.
+- Label di kanvas menampilkan tipe, contoh "Elco 10µF".
+- Pick Parts: kapasitor tetap satu entri; kata kunci pencarian ditambah (elco, elektrolit, keramik, tantalum, film, mylar, mkt).
+- Badge versi v1.7; fitur di `README.md` diperbarui. Mesin simulasi tidak diubah.
+
+**Pengujian**
+- BELUM dijalankan. Perubahan dibuat lewat konektor GitHub tanpa lingkungan eksekusi, jadi `node --check` dan uji di browser belum dilakukan; kode hanya ditinjau manual. Mohon buka `index.html` dan coba: taruh kapasitor, ganti tipe, ketik nilai, putar, ganti tampilan Gambar/Skema, undo/redo, simpan/muat.
+
+**Catatan / keterbatasan**
+- Tipe hanya mengubah tampilan. Kapasitor tetap ideal: tidak ada ESR, arus bocor, tegangan kerja maksimum, atau peringatan pemasangan terbalik pada Elco/Tantalum.
+- Konvensi polaritas kapasitor: pin 1 = (+) (sesuai contoh RC dan penyearah). Ini berbeda dari Baterai yang (+)-nya di pin 2.
+
+---
+
 ## 2026-11-22: v1.6.0, Kabel Bisa Ditekuk dan Dipindah Ujungnya (gaya Wokwi) (Claude)
 **Dilakukan** (file: `index.html`, `LOG.md`)
 - **Model kabel diubah menjadi daftar titik (polyline).** Tiap kabel (tautan pin-ke-pin) menyimpan titik-titik `pts`; segmen digambar dan dihitung secara listrik dari titik itu (`rebuildWires`). Titik dibagi dengan segmen sehingga menggeser titik langsung memperbarui gambar.

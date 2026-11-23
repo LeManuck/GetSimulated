@@ -4,8 +4,9 @@ Simulator elektronik berbasis web: satu file `index.html`, tanpa dependensi, bis
 
 ## Fitur
 - Komponen: baterai, sumber AC sinus, resistor, kapasitor, induktor, LED (4 warna), dioda (1N4148, 1N4007, 1N5819, BAT54), saklar, GND.
+- **Tipe kapasitor**: Elco (elektrolit), Keramik, Tantalum, dan Film/Mylar, dipilih lewat selector di panel Inspektor. Kapasitansi diketik manual (bawaan 10 µF). Elco dan Tantalum ditampilkan berkutub (pin 1 = +); tipe hanya memengaruhi tampilan, bukan perhitungan.
 - **Pick parts**: menu pemilih komponen dengan pencarian dan kategori (Daya, Pasif, Semikonduktor, Kontrol), plus daftar komponen yang terakhir dipakai.
-- **Tampilan Gambar / Skema**: mode Gambar menampilkan komponen berbentuk fisik (resistor dengan gelang warna sesuai nilai, LED yang menyala, dioda, baterai, kapasitor, saklar); mode Skema menampilkan simbol diagram sirkuit.
+- **Tampilan Gambar / Skema**: mode Gambar menampilkan komponen berbentuk fisik (resistor dengan gelang warna sesuai nilai, LED yang menyala, dioda, baterai, kapasitor sesuai tipe, saklar); mode Skema menampilkan simbol diagram sirkuit.
 - Nilai komponen lewat selector preset atau ketik bebas (akhiran SI: p, n, u, m, k, M, G).
 - Editor: seret komponen, kabel (termasuk sambungan T), putar, hapus, undo (Ctrl/Cmd+Z), zoom dan geser tampilan.
 - Pembacaan tegangan, arus, dan daya per komponen, ditambah osiloskop mini.
