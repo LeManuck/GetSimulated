@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-11-24: v1.9.0, Polaritas Kapasitor Berpengaruh, Nama Pin Saat Ditekan, Panduan Disederhanakan (Claude)
+**Dilakukan** (file: `index.html`, `README.md`, `LOG.md`)
+- **Polaritas Elco dan Tantalum kini memengaruhi simulasi.** Kapasitor berkutub dimodelkan sebagai kapasitor ideal dengan **dioda proteksi terbalik** di dalamnya (anoda pin 2, katoda pin 1, sekitar 1 V pada 10 mA). Dipasang benar (pin 1 = +) berperilaku seperti kapasitor biasa; dipasang terbalik, tegangannya terjepit sekitar −1 V dan arus mengalir lewat dioda itu. Arus yang ditampilkan sudah memasukkan arus dioda. Status kanvas menampilkan **"Peringatan: kapasitor berkutub terpasang terbalik"** bila tegangannya di bawah −0,5 V. Keramik dan Film tidak berkutub (tanpa dioda).
+- Selama dioda terbalik jelas mati (< 0,3 V), solver tidak menambah iterasi, sehingga kapasitor yang terpasang benar tidak memperlambat simulasi.
+- Teks keterangan polaritas di Inspektor kapasitor dihapus.
+- **Nama pin muncul saat pin ditekan.** Tekan sebuah pin untuk melihat balon nama dan kutubnya di pin itu; tetap terlihat 2,5 detik setelah dilepas. Saat menyambung kabel, pin tujuan yang disorot juga menampilkan namanya. Nama sesuai komponen aslinya: Baterai (− Negatif / + Positif), Sumber AC (Terminal − / +), LED dan Dioda (Anoda (+) / Katoda (−)), Elco dan Tantalum (+ Positif / − Negatif), Resistor, Induktor, dan Kapasitor tanpa kutub (Kaki 1 / Kaki 2), Saklar (Kontak 1 / 2), GND. Balon merah untuk kutub positif, biru untuk negatif, abu-abu untuk netral; ukurannya tetap saat zoom. Inspektor kabel ikut memakai nama pin ini ("Dari ... Ke ...").
+- **Panduan disederhanakan.** Panduan Cepat dipangkas jadi intro pendek dan dua butir (menyambung kabel; memilih, menekuk, dan menghapus kabel); butir menaruh komponen otomatis dan butir geser/putar dihapus, dan kalimat "Rutenya diatur otomatis" dibuang. Jendela Bantuan (?) dirapikan: tabel pintasan dengan keterangan singkat, serta lima tips pendek (kabel, menekuk kabel, nama pin, menghapus, osiloskop). Teks di Inspektor kabel dipersingkat.
+- Badge versi v1.9; README diperbarui.
+
+**Pengujian**
+- Model polaritas diuji terpisah di Node dengan salinan stamping solver: Elco terpasang benar mengisi sampai 5,000 V tanpa iterasi tambahan; Elco terbalik terjepit di −0,953 V dengan arus −4,05 mA (rangkaian 5 V lewat 1 kΩ); kapasitor tanpa kutub mencapai −5,000 V (tidak dijepit).
+- BELUM diuji: kode kanvas/DOM (balon nama pin, teks panduan, peringatan di status) dan tampilan di browser; `node --check` seluruh `index.html` juga belum dijalankan karena konektor GitHub tidak punya browser. Mohon coba: tekan pin tiap jenis komponen, sambungkan kabel dan lihat nama pin tujuan, balik arah Elco di contoh RC lalu lihat peringatan dan tegangan terjepit.
+
+**Catatan / keterbatasan**
+- Model terbalik hanya penjepit dioda: tidak ada tegangan kerja maksimum, ESR, arus bocor normal, kerusakan/meledak, atau perbedaan khusus Tantalum.
+- Nama pin muncul saat pin ditekan (bukan saat kursor hanya melayang), jadi tidak tampil di layar sentuh tanpa menyentuh pin.
+
+---
+
 ## 2026-11-24: v1.8.0, Osiloskop Stabil dengan Pemicu, Volt/div, dan Time/div (Claude)
 **Masalah**: jejak osiloskop bergeser terus dari kanan ke kiri (buffer bergulir) sehingga gelombang non-datar sulit dibaca.
 
@@ -43,7 +62,7 @@
 - BELUM dijalankan. Perubahan dibuat lewat konektor GitHub tanpa lingkungan eksekusi, jadi `node --check` dan uji di browser belum dilakukan; kode hanya ditinjau manual. Mohon buka `index.html` dan coba: taruh kapasitor, ganti tipe, ketik nilai, putar, ganti tampilan Gambar/Skema, undo/redo, simpan/muat.
 
 **Catatan / keterbatasan**
-- Tipe hanya mengubah tampilan. Kapasitor tetap ideal: tidak ada ESR, arus bocor, tegangan kerja maksimum, atau peringatan pemasangan terbalik pada Elco/Tantalum.
+- Tipe hanya mengubah tampilan. Kapasitor tetap ideal: tidak ada ESR, arus bocor, tegangan kerja maksimum, atau peringatan pemasangan terbalik pada Elco/Tantalum. (Diperbarui di v1.9.0: polaritas kini memengaruhi simulasi.)
 - Konvensi polaritas kapasitor: pin 1 = (+) (sesuai contoh RC dan penyearah). Ini berbeda dari Baterai yang (+)-nya di pin 2.
 
 ---

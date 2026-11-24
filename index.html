@@ -696,7 +696,7 @@ main {
       </svg>
     </div>
     <div class="brand-info">
-      <span class="brand-name">GetSimulated <span class="badge-ver">v1.8</span></span>
+      <span class="brand-name">GetSimulated <span class="badge-ver">v1.9</span></span>
       <span class="brand-sub">Simulator Rangkaian Elektronik</span>
     </div>
   </div>
@@ -855,29 +855,28 @@ main {
 <div id="modal-help" hidden>
   <div class="modal-box" style="max-width: 480px;">
     <div class="modal-header">
-      <h3>Pintasan Keyboard & Panduan</h3>
+      <h3>Bantuan</h3>
       <button onclick="$('#modal-help').hidden=true" style="border:none; background:transparent; font-size:16px;">✕</button>
     </div>
     <div class="modal-body">
       <table class="shortcut-table">
-        <tr><td><kbd>V</kbd></td><td>Alat <b>Pilih</b> (Pindah, Inspeksi komponen & kabel)</td></tr>
-        <tr><td><kbd>R</kbd></td><td><b>Putar</b> komponen terpilih 90°</td></tr>
-        <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td><b>Hapus</b> komponen / kabel yang sedang terpilih</td></tr>
-        <tr><td><kbd>Spasi</kbd></td><td><b>Jalankan / Jeda</b> simulasi</td></tr>
-        <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td><b>Undo</b> langkah sebelumnya</td></tr>
-        <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td><b>Redo</b> langkah sesudahnya</td></tr>
-        <tr><td><kbd>Esc</kbd></td><td>Tutup dialog / batal tarik kabel / batal menaruh komponen</td></tr>
-        <tr><td><kbd>Scroll Mouse</kbd></td><td>Zoom in / zoom out kanvas</td></tr>
+        <tr><td><kbd>V</kbd></td><td>Alat Pilih</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Putar komponen</td></tr>
+        <tr><td><kbd>Delete</kbd></td><td>Hapus yang terpilih</td></tr>
+        <tr><td><kbd>Spasi</kbd></td><td>Jalankan / jeda simulasi</td></tr>
+        <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>Undo</td></tr>
+        <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>Redo</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Tutup atau batalkan</td></tr>
+        <tr><td><kbd>Scroll</kbd></td><td>Zoom kanvas</td></tr>
       </table>
       <div class="guide-box">
-        <strong>Tips Penggunaan:</strong>
+        <strong>Tips:</strong>
         <ul class="guide-list">
-          <li><b>Menyambung Kabel:</b> Tekan dan seret dari pin (ujung) satu komponen ke pin komponen lain. Rute dibuat otomatis dan menghindari badan komponen. Kabel juga bisa diakhiri di tengah kabel lain.</li>
-          <li><b>Mengedit Kabel:</b> Klik kabel, lalu seret titik kecil di tengah tiap garis untuk menekuknya (titik baru muncul di tiap garis). Titik yang diluruskan kembali menyatu. Seret ujung kabel ke pin lain untuk memindahkan sambungan; kabel diroute ulang otomatis.</li>
-          <li><b>Kabel Ikut Komponen:</b> Saat komponen digeser atau diputar, kabel yang terhubung diroute ulang (tekukan manual direset).</li>
-          <li><b>Menghapus:</b> Pilih komponen atau kabel terlebih dahulu, lalu klik tombol Hapus atau tekan tombol Delete / Backspace.</li>
-          <li><b>Auto-Pilih:</b> Menaruh komponen otomatis beralih ke alat Pilih agar tidak perlu klik ganti alat.</li>
-          <li><b>Osiloskop:</b> Pilih komponen untuk melihat tegangannya. Atur Volt/div dan Time/div, pemicu (tepi + level), dan Posisi Y. Tombol <b>Autoset</b> menyetel skala otomatis. Sinyal berulang tampil diam karena disinkronkan ke pemicu; mode Single menangkap sekali lalu berhenti.</li>
+          <li><b>Kabel:</b> seret dari pin satu komponen ke pin komponen lain.</li>
+          <li><b>Menekuk kabel:</b> klik kabelnya, lalu seret titik di tengah garis. Seret ujung kabel untuk memindahkannya ke pin lain.</li>
+          <li><b>Nama pin:</b> tekan sebuah pin untuk melihat namanya (misalnya + / − atau Anoda / Katoda).</li>
+          <li><b>Menghapus:</b> pilih komponen atau kabel, lalu tekan Delete.</li>
+          <li><b>Osiloskop:</b> pilih komponen untuk melihat tegangannya. Tekan Autoset agar skala menyesuaikan sinyal.</li>
         </ul>
       </div>
     </div>
@@ -904,8 +903,9 @@ const T = {
   G: { n: 'GND' }
 };
 
-// Tipe kapasitor (disimpan di komponen sebagai c.ct). pol = berkutub: pin 1 = (+), pin 2 = (−). s = nama pendek di label kanvas.
-// Nilai kapasitansi diisi manual (bawaan 10µF); tipe hanya memengaruhi tampilan, bukan perhitungan.
+// Tipe kapasitor (disimpan di komponen sebagai c.ct). pol = berkutub: pin 1 = (+), pin 2 = (−).
+// Kapasitor berkutub (Elco, Tantalum) disimulasikan dengan dioda proteksi terbalik di dalamnya (lihat step()).
+// s = nama pendek di label kanvas. Nilai kapasitansi diisi manual (bawaan 10µF).
 const CAPT = {
   elco: { n: 'Elco (Elektrolit)', s: 'Elco', pol: true },
   cer: { n: 'Keramik', s: 'Keramik', pol: false },
@@ -914,6 +914,21 @@ const CAPT = {
 };
 const capKey = c => CAPT[c.ct] ? c.ct : 'elco';
 const ctype = c => CAPT[capKey(c)];
+
+// Nama pin per komponen (indeks 0 = pin 1, 1 = pin 2) dan kutubnya: +1 positif, -1 negatif, 0 netral
+const PIN = {
+  V: [['− Negatif', -1], ['+ Positif', 1]],
+  A: [['Terminal −', -1], ['Terminal +', 1]],
+  R: [['Kaki 1', 0], ['Kaki 2', 0]],
+  L: [['Kaki 1', 0], ['Kaki 2', 0]],
+  S: [['Kontak 1', 0], ['Kontak 2', 0]],
+  D: [['Anoda (+)', 1], ['Katoda (−)', -1]],
+  J: [['Anoda (+)', 1], ['Katoda (−)', -1]],
+  G: [['GND', 0], ['GND', 0]]
+};
+const pinInfo = (c, t) => c.t == 'C'
+  ? (ctype(c).pol ? [['+ Positif', 1], ['− Negatif', -1]] : [['Kaki 1', 0], ['Kaki 2', 0]])[t]
+  : PIN[c.t][t];
 
 const TC = {
   V: '#ef4444', A: '#ef4444', R: '#f59e0b', C: '#3b82f6', L: '#8b5cf6', D: '#10b981', J: '#f97316', S: '#64748b', G: '#64748b'
@@ -965,7 +980,8 @@ const S = {
   pv: null,
   rc: [3, 6, 0, 2],
   wd: null,
-  hv: null
+  hv: null,
+  ptag: null
 };
 const WP = () => S.wires.flatMap(w => [w[0], w[1]]);
 let net = null;
@@ -1334,6 +1350,7 @@ function gauss(A, N) {
 }
 
 const NV = 2 * .02585, isat = c => .01 / Math.exp(c.val / NV);
+const ISR = .01 / Math.exp(1 / NV); // dioda terbalik kapasitor berkutub: sekitar 1 V pada 10 mA
 
 function step() {
   const { n, els, N } = net, dt = S.dt;
@@ -1351,7 +1368,14 @@ function step() {
       const c = e.c, a = e.a, b = e.b;
       if (c.t == 'R') g(a, b, 1 / c.val);
       else if (c.t == 'S') g(a, b, c.on ? 1e3 : 1e-9);
-      else if (c.t == 'C') { const y = c.val / dt; g(a, b, y); cs(a, b, -y * c.v); }
+      else if (c.t == 'C') {
+        const y = c.val / dt; g(a, b, y); cs(a, b, -y * c.v);
+        if (ctype(c).pol) {
+          // Berkutub: dioda proteksi paralel (anoda pin 2, katoda pin 1) menjepit tegangan terbalik sekitar −1 V
+          const ex = Math.exp(c.vd / NV), gd = ISR * ex / NV + 1e-12;
+          g(b, a, gd); cs(b, a, ISR * (ex - 1) - gd * c.vd);
+        }
+      }
       else if (c.t == 'L') { g(a, b, dt / c.val); cs(a, b, c.i); }
       else if (c.t == 'D' || c.t == 'J') {
         const Is = isat(c), ex = Math.exp(c.vd / NV), gd = Is * ex / NV + 1e-12;
@@ -1371,6 +1395,14 @@ function step() {
         const c = e.c, v = (e.a >= 0 ? x[e.a] : 0) - (e.b >= 0 ? x[e.b] : 0);
         if (Math.abs(v - c.vd) > 1e-6) conv = false;
         c.vd += Math.max(-.5, Math.min(.1, v - c.vd));
+      } else if (e.c.t == 'C' && ctype(e.c).pol) {
+        // Selama dioda terbalik jelas mati (< 0,3 V), cukup ikuti tegangannya tanpa iterasi tambahan
+        const c = e.c, v = (e.b >= 0 ? x[e.b] : 0) - (e.a >= 0 ? x[e.a] : 0);
+        if (v < .3 && c.vd < .3) c.vd = v;
+        else {
+          if (Math.abs(v - c.vd) > 1e-6) conv = false;
+          c.vd += Math.max(-.5, Math.min(.1, v - c.vd));
+        }
       }
     }
     if (conv) break;
@@ -1379,7 +1411,12 @@ function step() {
     const c = e.c, v = (e.a >= 0 ? x[e.a] : 0) - (e.b >= 0 ? x[e.b] : 0);
     if (c.t == 'R') c.i = v / c.val;
     else if (c.t == 'S') c.i = v * (c.on ? 1e3 : 1e-9);
-    else if (c.t == 'C') { c.i = c.val / dt * (v - c.v); c.v = v; continue; }
+    else if (c.t == 'C') {
+      c.i = c.val / dt * (v - c.v);
+      if (ctype(c).pol) { const id = ISR * (Math.exp(c.vd / NV) - 1); if (id > 0) c.i -= id; } // arus dioda terbalik: pin 2 ke pin 1
+      c.v = v;
+      continue;
+    }
     else if (c.t == 'L') c.i = c.i + dt / c.val * v;
     else if (c.t == 'D' || c.t == 'J') c.i = isat(c) * (Math.exp(c.vd / NV) - 1);
     else { c.i = x[e.k]; c.v = -v; continue; }
@@ -1451,6 +1488,7 @@ cv.addEventListener('pointerdown', e => {
   const [px, py] = wp(e);
   const gx = Math.round(px / G);
   const gy = Math.round(py / G);
+  S.ptag = null;
 
   // Mode menaruh komponen (setelah Pick Parts)
   if (S.tool != 'sel') {
@@ -1475,11 +1513,12 @@ cv.addEventListener('pointerdown', e => {
     }
   }
 
-  // 1. Tekan di pin komponen -> mulai tarik kabel baru
+  // 1. Tekan di pin komponen -> tampilkan nama pin dan mulai tarik kabel baru
   const th = near(px, py);
   if (th) {
     S.sel = null;
     S.sw = null;
+    S.ptag = { c: th.c, t: th.t, until: Infinity };
     S.wd = { c: th.c, t: th.t, from: th.p, cur: [px, py], tg: null, path: null, key: '' };
     ui();
     return;
@@ -1586,6 +1625,8 @@ addEventListener('pointermove', e => {
 });
 
 addEventListener('pointerup', () => {
+  // Nama pin tetap terlihat sebentar setelah pin dilepas
+  if (S.ptag && S.ptag.until === Infinity) S.ptag.until = performance.now() + 2500;
   const w = S.wd, we = S.we, wc = S.wc;
   S.wd = S.we = S.wc = S.wm = null;
   S.drag = S.pan = null;
@@ -1911,7 +1952,7 @@ $('#vw').onclick = () => { S.real = !S.real; ui(); };
 const pinName = e => {
   if (e.c == null) return 'titik di kabel lain';
   const c = cb(e.c);
-  return c ? `${T[c.t].n} (pin ${e.t + 1})` : '?';
+  return c ? `${T[c.t].n} (${pinInfo(c, e.t)[0]})` : '?';
 };
 
 function ui() {
@@ -1935,12 +1976,10 @@ function ui() {
           </span>
         </div>
         <div class="guide-box">
-          Pilih komponen dari palet atau tombol <strong>Pick Parts</strong>, lalu letakkan di kanvas.
+          Tekan <strong>Pick Parts</strong> untuk memilih komponen, lalu klik di kanvas untuk menaruhnya.
           <ul class="guide-list">
-            <li>Menaruh komponen <b>otomatis beralih ke alat Pilih</b> agar tidak sengaja menaruh ganda.</li>
-            <li><b>Tekan dan seret dari pin</b> (titik biru di ujung komponen) ke pin komponen lain untuk menyambung kabel. Rutenya diatur otomatis.</li>
+            <li><b>Tekan dan seret dari pin</b> (titik biru di ujung komponen) ke pin komponen lain untuk menyambung kabel.</li>
             <li>Klik kabel untuk memilihnya: <b>seret titik tengah garis untuk menekuk</b>, atau seret ujungnya ke pin lain. Tekan <strong>Hapus (Del)</strong> untuk menghapus.</li>
-            <li>Geser atau putar komponen: kabelnya ikut diroute ulang.</li>
           </ul>
         </div>
       </div>`;
@@ -1960,7 +1999,7 @@ function ui() {
         <div class="guide-box">
           ${L ? `Dari: <b>${pinName(L.a)}</b><br>Ke: <b>${pinName(L.b)}</b>` : 'Segmen kabel dari simpanan lama.'}
           <small style="color:var(--mu); display:block; margin-top:8px;">
-            Seret titik kecil di tengah garis untuk menekuk kabel (titik baru muncul di tiap garis). Titik yang diluruskan kembali menyatu. Seret ujung kabel ke pin lain untuk memindah sambungan.
+            Seret titik di tengah garis untuk menekuk kabel. Seret ujung kabel ke pin lain untuk memindahkannya.
           </small>
         </div>
         <div style="margin-top:12px;">
@@ -2002,8 +2041,7 @@ function ui() {
             <label>Kapasitansi</label>
             <input id="iv" value="${fmt(c.val, '')}" placeholder="Contoh: 10u, 470n, 100p">
             <span style="font-weight:600; min-width:20px;">${t.u}</span>
-          </div>
-          <small style="color:var(--mu); font-size:11px;">${CAPT[ck].pol ? 'Berkutub: pin 1 = (+), pin 2 = (−). Polaritas hanya tampilan, simulasi tidak membedakannya.' : 'Tidak berkutub (tanpa polaritas).'}</small>`;
+          </div>`;
   } else if (c.t != 'G') {
     const m = t.p.includes(c.val);
     h += `<div class="prop-row">
@@ -2533,6 +2571,30 @@ function draw() {
     }
   }
 
+  // Nama pin: muncul saat pin ditekan (dan pin tujuan saat menyambung), tetap terlihat sebentar setelah dilepas
+  const tags = [], pt = S.ptag;
+  if (pt && S.comps.includes(pt.c) && performance.now() < pt.until) tags.push([pt.c, pt.t]);
+  if (S.wd && S.wd.tg && S.wd.tg.c != null) { const tc = cb(S.wd.tg.c); if (tc) tags.push([tc, S.wd.tg.t]); }
+  if (S.we && S.we.tg && S.we.tg.c != null) { const tc = cb(S.we.tg.c); if (tc) tags.push([tc, S.we.tg.t]); }
+  for (const [tc, ti] of tags) {
+    const [name, pol] = pinInfo(tc, ti), p = term(tc)[ti];
+    cx.save();
+    cx.translate(p[0] * G, p[1] * G);
+    cx.scale(1 / V.z, 1 / V.z); // ukuran tetap saat zoom
+    cx.font = '600 11px system-ui, -apple-system, sans-serif';
+    const bw = cx.measureText(name).width + 16;
+    cx.fillStyle = pol > 0 ? '#ef4444' : pol < 0 ? '#2563eb' : '#475569';
+    cx.beginPath();
+    cx.roundRect(-bw / 2, -34, bw, 20, 6);
+    cx.moveTo(-5, -14); cx.lineTo(0, -8); cx.lineTo(5, -14);
+    cx.fill();
+    cx.fillStyle = '#ffffff';
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    cx.fillText(name, 0, -24);
+    cx.restore();
+  }
+
   drawScope();
 }
 
@@ -2549,7 +2611,8 @@ function loop() {
 
   // Status & Warning badge
   const w = !net ? 'Tambahkan komponen GND agar simulasi berjalan' :
-            S.comps.some(c => c.t == 'D' && c.i > .03) ? 'Peringatan: LED kelebihan arus (>30mA)' : '';
+            S.comps.some(c => c.t == 'D' && c.i > .03) ? 'Peringatan: LED kelebihan arus (>30mA)' :
+            S.comps.some(c => c.t == 'C' && ctype(c).pol && c.v < -.5) ? 'Peringatan: kapasitor berkutub terpasang terbalik' : '';
   const sb = $('#st');
   sb.className = w ? 'w' : '';
   const idle = S.tool != 'sel' ? `Ketuk kanvas untuk menaruh ${T[S.tool].n} (Esc untuk batal)` : 'Kanvas Siap';
