@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-11-24: v1.8.0, Osiloskop Stabil dengan Pemicu, Volt/div, dan Time/div (Claude)
+**Masalah**: jejak osiloskop bergeser terus dari kanan ke kiri (buffer bergulir) sehingga gelombang non-datar sulit dibaca.
+
+**Dilakukan** (file: `index.html`, `README.md`, `LOG.md`)
+- **Tampilan diam seperti DSO sungguhan.** Sampel diambil pada laju sesuai Time/div (600 titik per layar, interpolasi linear antar langkah simulasi) ke buffer pra-pemicu. Saat sinyal melewati level pemicu pada tepi yang dipilih, satu bingkai 600 titik ditangkap dengan titik pemicu di **tengah layar**; bingkai hanya diganti saat ada pemicu baru, jadi sinyal berulang tampil diam. Koreksi sub-sampel meletakkan titik persilangan tepat di tengah (tidak ada getaran satu sampel).
+- **Volt/div**: 10 mV sampai 50 V (12 langkah). **Time/div**: 100 µs sampai 500 ms (12 langkah). Layar kini graticule 10 x 8 div dengan tanda 1/5 div di sumbu tengah (kanvas dipertinggi dari 100 px ke 200 px).
+- **Pemicu**: mode **Auto** (bila tidak ada pemicu selama setengah layar, bingkai digambar sendiri; sinyal DC tampil datar), **Normal** (hanya menampilkan bingkai bila terpicu, bingkai terakhir ditahan), **Single** (menangkap satu bingkai lalu berhenti). Tepi naik / turun, **Level** (slider dalam div layar, tegangan ditampilkan di sampingnya), dan penanda level (segitiga kuning di kanan + garis putus-putus), penanda posisi pemicu (atas tengah), penanda 0 V (segitiga biru di kiri).
+- **Posisi Y** (geser jejak vertikal, ±4 div), tombol **Run/Stop**, dan **Autoset** (memilih Volt/div, Posisi Y, level di tengah sinyal, dan Time/div dari frekuensi sumber AC atau frekuensi hasil ukur).
+- Status di header layar: AUTO, TRIG'D, WAIT, STOP, PAUSE, STANDBY. Baris hasil ukur di bawah layar: Vpp, Max, Min, dan frekuensi (dari bingkai terakhir), serta peringatan bila sinyal di luar layar atau Time/div terlalu cepat untuk dt yang dipilih.
+- Buffer osiloskop direset saat komponen lain dipilih, rangkaian berubah/direset, atau Time/div diganti. Sebelum simulasi dimulai (t < 0) jejak sengaja kosong.
+- `S.hist` dihapus; bantuan (tombol ?), README, dan badge versi (v1.8) diperbarui. Mesin simulasi tidak diubah.
+
+**Pengujian**
+- Logika akuisisi (pemicu, bingkai, mode Auto/Normal/Single, hasil ukur) diuji terpisah di Node dengan sinyal sintetis: sinus 50 Hz terpicu stabil (frekuensi terukur 50 Hz, bingkai identik pada level 2 V), sinyal DC 9 V tampil datar di Auto, mode Single berhenti setelah satu bingkai, sinyal tanpa persilangan di Auto digambar sendiri. Koreksi sub-sampel ditambahkan setelah uji itu dan tidak diuji ulang.
+- BELUM diuji: kode kanvas/DOM (gambar graticule, kontrol, slider) dan tampilan di browser. Perubahan dibuat lewat konektor GitHub tanpa lingkungan browser, jadi `node --check` seluruh `index.html` juga belum dijalankan. Mohon dicoba: pilih sumber AC lalu Autoset, ubah Volt/div dan Time/div, coba Normal dan Single, geser Level dan Posisi Y, dan pilih kapasitor di contoh RC dengan Time/div 50 ms.
+
+**Catatan / keterbatasan**
+- Contoh penyearah (setengah gelombang): level bawaan 0 V tidak pernah terlewati sinyal 0–4 V, jadi Auto menggambar bingkai sendiri (tidak terkunci). Tekan **Autoset** agar level pindah ke tengah sinyal.
+- Pemicu hanya mendeteksi persilangan pada laju sampel osiloskop; resolusi waktu dibatasi dt simulasi (garis diinterpolasi linear di antara langkah).
+- Time/div besar lambat di waktu nyata (jendela 5 s pada 500 ms/div dengan laju simulasi sekitar 0,3x). Tidak ada mode roll, kopling AC/DC, posisi horizontal, atau kursor ukur.
+
+---
+
 ## 2026-11-23: v1.7.0, Tipe Kapasitor (Elco, Keramik, Tantalum, Film) dengan Nilai Manual (Claude)
 **Dilakukan** (file: `index.html`, `README.md`, `LOG.md`)
 - Kapasitor kini punya **tipe**: Elco (elektrolit), Keramik, Tantalum, Film/Mylar. Dipilih lewat selector **Tipe** di Inspektor. Tipe disimpan di komponen (`ct`) sehingga ikut undo/redo, simpan/muat, dan contoh rangkaian (contoh RC dan penyearah memakai Elco). Komponen atau simpanan lama tanpa tipe dianggap Elco.
