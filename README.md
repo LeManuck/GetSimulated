@@ -15,13 +15,23 @@ Simulator elektronik berbasis web: satu file `index.html`, tanpa dependensi, bis
 - Contoh rangkaian siap pakai, simpan/muat (localStorage), tema terang/gelap.
 
 ## Menjalankan
-Buka `index.html` di browser, atau lewat GitHub Pages (lihat di bawah).
+Buka `index.html` di browser, atau lewat GitHub Pages / InfinityFree (lihat di bawah).
 
 ## Hosting dengan GitHub Pages
 1. Buka **Settings → Pages** di repo ini.
 2. Pada **Build and deployment**, pilih **Deploy from a branch**.
 3. Pilih branch `main`, folder `/ (root)`, lalu **Save**.
 4. Tunggu 1-2 menit; alamatnya biasanya `https://<nama-akun>.github.io/GetSimulated/`.
+
+## Deploy otomatis ke InfinityFree
+Setiap push ke `main` menjalankan workflow `.github/workflows/deploy.yml` yang meng-upload `index.html` ke folder `htdocs` lewat FTP.
+
+Pengaturan satu kali:
+1. Di panel InfinityFree, buka **Accounts → Manage → FTP Details**, catat Hostname, Username, dan Password.
+2. Di GitHub, buka **Settings → Secrets and variables → Actions → Repository secrets**, lalu tambahkan tiga secret: `FTP_SERVER` (hostname FTP, bukan domain situs), `FTP_USERNAME`, dan `FTP_PASSWORD`.
+3. Push ke `main`, atau jalankan manual dari tab **Actions → Deploy ke InfinityFree → Run workflow**.
+
+Hanya `index.html` yang diupload; `README.md`, `LOG.md`, dan folder `.github` tidak. Workflow menyimpan satu file pelacak (`.ftp-deploy-sync-state.json`) di `htdocs` untuk mengunggah hanya file yang berubah.
 
 ## Teknis
 Modified Nodal Analysis, simulasi transien backward Euler, Newton-Raphson untuk dioda/LED. Detail riwayat dan keterbatasan ada di `LOG.md`.

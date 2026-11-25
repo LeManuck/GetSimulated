@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-11-25: Deploy otomatis ke InfinityFree lewat GitHub Actions (Claude)
+**Dilakukan** (file: `.github/workflows/deploy.yml` baru, `README.md`, `LOG.md`; `index.html` tidak diubah)
+- Workflow **"Deploy ke InfinityFree"**: setiap push ke `main` (atau tombol Run workflow di tab Actions) meng-upload isi repo ke `/htdocs/` lewat FTP memakai `SamKirkland/FTP-Deploy-Action@v4.3.5` (protokol ftp, port 21). Dikecualikan dari upload: `.git*`, `.github/`, `README.md`, `LOG.md`, jadi yang tampil di situs hanya `index.html`.
+- Butuh tiga **Repository secret** yang diisi pemilik repo sendiri (konektor tidak bisa mengisi secret): `FTP_SERVER` (hostname FTP dari panel InfinityFree > Manage > FTP Details, bukan domain situs), `FTP_USERNAME`, `FTP_PASSWORD`.
+- Bila upload pertama gagal (FTP InfinityFree kadang menolak sesaat), workflow menunggu 20 detik lalu mencoba sekali lagi. Run yang bersamaan diantrekan (`concurrency`), tidak dibatalkan.
+- Action menyimpan satu file pelacak `.ftp-deploy-sync-state.json` di `htdocs` agar run berikutnya hanya mengunggah file yang berubah.
+- `README.md`: ditambah bagian "Deploy otomatis ke InfinityFree" berisi langkah pengaturan satu kali.
+
+**Pengujian**
+- BELUM diuji. Workflow dibuat lewat konektor GitHub tanpa bisa menjalankannya. Commit pembuatan workflow ini sendiri memicu satu run; hasilnya (berhasil/gagal, tergantung secret sudah benar atau belum) dilihat di tab **Actions**.
+
+**Catatan / keterbatasan**
+- Bila FTP InfinityFree menolak koneksi dari server GitHub, atau `server-dir`/hostname perlu disesuaikan, workflow perlu diubah setelah melihat pesan error di log Actions.
+- Password FTP tersimpan sebagai secret GitHub dan tidak boleh ditulis di repo atau log.
+- Hanya file yang ada di repo yang diupload; file yang ditambah langsung di server lewat panel tidak dilacak.
+
+---
+
 ## 2026-11-24: v1.9.0, Polaritas Kapasitor Berpengaruh, Nama Pin Saat Ditekan, Panduan Disederhanakan (Claude)
 **Dilakukan** (file: `index.html`, `README.md`, `LOG.md`)
 - **Polaritas Elco dan Tantalum kini memengaruhi simulasi.** Kapasitor berkutub dimodelkan sebagai kapasitor ideal dengan **dioda proteksi terbalik** di dalamnya (anoda pin 2, katoda pin 1, sekitar 1 V pada 10 mA). Dipasang benar (pin 1 = +) berperilaku seperti kapasitor biasa; dipasang terbalik, tegangannya terjepit sekitar −1 V dan arus mengalir lewat dioda itu. Arus yang ditampilkan sudah memasukkan arus dioda. Status kanvas menampilkan **"Peringatan: kapasitor berkutub terpasang terbalik"** bila tegangannya di bawah −0,5 V. Keramik dan Film tidak berkutub (tanpa dioda).
