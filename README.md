@@ -1,6 +1,17 @@
 # GetSimulated
 
-Simulator elektronik berbasis web: satu file `index.html`, tanpa dependensi, bisa dibuka langsung di browser (desktop maupun ponsel).
+Simulator elektronik berbasis web: HTML + CSS + JavaScript statis (tanpa dependensi, tanpa PHP), bisa dibuka di browser desktop maupun ponsel. Kode dipisah ke beberapa file di folder `assets/` agar bisa di-cache browser dan lebih ringan bagi server.
+
+## Struktur file
+```
+index.html            kerangka halaman (markup saja)
+assets/css/style.css  seluruh gaya tampilan
+assets/js/core.js     data komponen, state, util, rute kabel, solver MNA
+assets/js/scope.js    osiloskop digital (akuisisi, pemicu, gambar layar)
+assets/js/editor.js   interaksi kanvas, undo/redo, simpan/muat, keyboard
+assets/js/app.js      toolbar, Pick Parts, Inspektor, gambar kanvas, loop, boot
+```
+Urutan pemuatan di `index.html` wajib: `core.js`, `scope.js`, `editor.js`, `app.js` (file-file ini berbagi variabel global). Semua simulasi tetap berjalan di browser pengunjung; server hanya menyajikan file statis.
 
 ## Fitur
 - Komponen: baterai, sumber AC sinus, resistor, kapasitor, induktor, LED (4 warna), dioda (1N4148, 1N4007, 1N5819, BAT54), saklar, GND.
@@ -15,7 +26,7 @@ Simulator elektronik berbasis web: satu file `index.html`, tanpa dependensi, bis
 - Contoh rangkaian siap pakai, simpan/muat (localStorage), tema terang/gelap.
 
 ## Menjalankan
-Buka `index.html` di browser, atau lewat GitHub Pages / InfinityFree (lihat di bawah).
+Buka `index.html` di browser (folder `assets/` harus ikut berada di sebelahnya), atau lewat GitHub Pages / InfinityFree (lihat di bawah).
 
 ## Hosting dengan GitHub Pages
 1. Buka **Settings → Pages** di repo ini.
@@ -24,14 +35,16 @@ Buka `index.html` di browser, atau lewat GitHub Pages / InfinityFree (lihat di b
 4. Tunggu 1-2 menit; alamatnya biasanya `https://<nama-akun>.github.io/GetSimulated/`.
 
 ## Deploy otomatis ke InfinityFree
-Setiap push ke `main` menjalankan workflow `.github/workflows/deploy.yml` yang meng-upload `index.html` ke folder `htdocs` lewat FTP.
+Setiap push ke `main` menjalankan workflow `.github/workflows/deploy.yml` yang meng-upload isi repo (`index.html` dan folder `assets/`) ke folder `htdocs` lewat FTP.
 
 Pengaturan satu kali:
 1. Di panel InfinityFree, buka **Accounts → Manage → FTP Details**, catat Hostname, Username, dan Password.
 2. Di GitHub, buka **Settings → Secrets and variables → Actions → Repository secrets**, lalu tambahkan tiga secret: `FTP_SERVER` (hostname FTP, bukan domain situs), `FTP_USERNAME`, dan `FTP_PASSWORD`.
 3. Push ke `main`, atau jalankan manual dari tab **Actions → Deploy ke InfinityFree → Run workflow**.
 
-Hanya `index.html` yang diupload; `README.md`, `LOG.md`, dan folder `.github` tidak. Workflow menyimpan satu file pelacak (`.ftp-deploy-sync-state.json`) di `htdocs` untuk mengunggah hanya file yang berubah.
+`README.md`, `LOG.md`, dan folder `.github` tidak diupload. Workflow menyimpan satu file pelacak (`.ftp-deploy-sync-state.json`) di `htdocs` untuk mengunggah hanya file yang berubah.
+
+Catatan cache: link CSS dan JS di `index.html` memakai `?v=...`. Ubah nilai itu setiap kali file di `assets/` berubah agar browser pengunjung mengambil versi baru.
 
 ## Teknis
 Modified Nodal Analysis, simulasi transien backward Euler, Newton-Raphson untuk dioda/LED. Detail riwayat dan keterbatasan ada di `LOG.md`.
