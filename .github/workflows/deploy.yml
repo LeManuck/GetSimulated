@@ -1,0 +1,60 @@
+# Deploy otomatis ke InfinityFree lewat FTP setiap ada push ke main.
+# Butuh tiga Repository secret: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+# (Settings > Secrets and variables > Actions). Detail FTP ada di panel InfinityFree > Manage > FTP Details.
+name: Deploy ke InfinityFree
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # tombol "Run workflow" di tab Actions
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Upload lewat FTP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil kode terbaru
+        uses: actions/checkout@v4
+
+      - name: Upload ke InfinityFree
+        id: ftp1
+        continue-on-error: true # FTP InfinityFree kadang gagal sesaat, lihat langkah coba ulang di bawah
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          server-dir: /htdocs/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            README.md
+            LOG.md
+
+      - name: Tunggu sebelum coba ulang
+        if: steps.ftp1.outcome == 'failure'
+        run: sleep 20
+
+      - name: Coba ulang upload
+        if: steps.ftp1.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          server-dir: /htdocs/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            README.md
+            LOG.md
