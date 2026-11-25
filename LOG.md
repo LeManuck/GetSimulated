@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-11-25: Pisahkan index.html menjadi CSS dan beberapa file JS di folder assets/ (Claude)
+**Dilakukan** (file: `index.html`, `assets/css/style.css` baru, `assets/js/core.js` baru, `assets/js/scope.js` baru, `assets/js/editor.js` baru, `assets/js/app.js` baru, `README.md`, `LOG.md`; semua di branch `split-files`, belum di `main`)
+- `index.html` dari satu file ±85 KB menjadi kerangka HTML (±9 KB) yang memuat `assets/css/style.css` dan empat skrip klasik berurutan: `core.js` (data komponen, state, util, rute kabel, solver MNA), `scope.js` (osiloskop: akuisisi, pemicu, Autoset, `drawScope`), `editor.js` (pointer/zoom, undo/redo, simpan/muat, keyboard), `app.js` (toolbar, Pick Parts, Inspektor, gambar kanvas, loop, boot).
+- Isi kode **dipindah apa adanya** tanpa mengubah logika. Satu-satunya perpindahan: `drawScope()` dari bagian gambar ke `scope.js`, dan blok solver (`fmt` sampai `step`) digabung ke `core.js` tepat setelah data/state. Skrip klasik berbagi lingkup global, jadi `onclick="..."` di HTML dan referensi antar-file tetap berfungsi.
+- Alasan: browser bisa meng-cache CSS/JS terpisah dan server hanya menyajikan file statis kecil. Simulasi tetap berjalan di browser pengunjung (bukan di server); PHP tidak dipakai karena tidak mengurangi beban dan justru menambah proses server.
+- Link CSS/JS memakai `?v=20261125` untuk pembatalan cache; nilai ini harus diganti saat file di `assets/` berubah.
+- `README.md`: bagian struktur file, cara menjalankan, deploy, dan catatan cache diperbarui. Workflow `deploy.yml` TIDAK diubah: ia sudah meng-upload seluruh isi repo kecuali `.git*`, `.github/`, `README.md`, `LOG.md`, jadi folder `assets/` ikut terkirim.
+
+**Pengujian**
+- BELUM diuji. Dibuat lewat konektor GitHub tanpa browser dan tanpa Node, jadi `node --check` per file dan uji di browser belum dijalankan. Pemisahan hanya ditinjau manual (urutan pemuatan dan kode yang berjalan saat dimuat dicek dengan membaca).
+- Mohon coba setelah merge: buka situs, pastikan tidak ada error di console, lalu cek contoh rangkaian, tarik kabel dari pin, ganti tipe kapasitor, osiloskop (Autoset), simpan/muat, dan tema gelap.
+
+**Catatan / keterbatasan**
+- Pekerjaan ada di branch `split-files`; deploy ke InfinityFree baru berjalan setelah branch di-merge ke `main`.
+- Urutan `<script>` di `index.html` wajib `core`, `scope`, `editor`, `app`. `app.js` memuat kode boot (`exm(0)`, `loop()`) sehingga harus terakhir.
+- Bila situs lama tertinggal di cache pengunjung setelah merge, naikkan nilai `?v=` pada link di `index.html`.
+- InfinityFree kadang menambah halaman tantangan keamanan untuk permintaan non-browser; ini tidak memengaruhi pengunjung biasa.
+
+---
+
 ## 2026-11-25: Deploy otomatis ke InfinityFree lewat GitHub Actions (Claude)
 **Dilakukan** (file: `.github/workflows/deploy.yml` baru, `README.md`, `LOG.md`; `index.html` tidak diubah)
 - Workflow **"Deploy ke InfinityFree"**: setiap push ke `main` (atau tombol Run workflow di tab Actions) meng-upload isi repo ke `/htdocs/` lewat FTP memakai `SamKirkland/FTP-Deploy-Action@v4.3.5` (protokol ftp, port 21). Dikecualikan dari upload: `.git*`, `.github/`, `README.md`, `LOG.md`, jadi yang tampil di situs hanya `index.html`.
