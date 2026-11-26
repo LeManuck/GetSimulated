@@ -6,15 +6,16 @@ Simulator elektronik berbasis web: HTML + CSS + JavaScript statis (tanpa depende
 ```
 index.html            kerangka halaman (markup saja)
 assets/css/style.css  seluruh gaya tampilan
-assets/js/core.js     data komponen, state, util, rute kabel, solver MNA
+assets/js/core.js     data komponen, state, util, rute kabel, solver MNA, model panas dan kerusakan
 assets/js/scope.js    osiloskop digital (akuisisi, pemicu, gambar layar)
 assets/js/editor.js   interaksi kanvas, undo/redo, simpan/muat, keyboard
-assets/js/app.js      toolbar, Pick Parts, Inspektor, gambar kanvas, loop, boot
+assets/js/app.js      toolbar, Pick Parts, Inspektor, gambar kanvas, efek ledakan, loop, boot
 ```
 Urutan pemuatan di `index.html` wajib: `core.js`, `scope.js`, `editor.js`, `app.js` (file-file ini berbagi variabel global). Semua simulasi tetap berjalan di browser pengunjung; server hanya menyajikan file statis.
 
 ## Fitur
 - Komponen: baterai, sumber AC sinus, resistor, kapasitor, induktor, LED (4 warna), dioda (1N4148, 1N4007, 1N5819, BAT54), saklar, GND.
+- **Panas dan ledakan**: tiap komponen punya suhu yang naik saat menyerap daya (indikator suhu kecil ada di panel Inspektor, tepat di bawah pengaturan nilai komponen yang dipilih). Rangkaian yang salah membuat komponen panas, lalu **meledak** (kilatan, percikan, asap) dan menjadi putus sampai rangkaian diperbaiki dan **Reset Simulasi** ditekan. Contoh kesalahan: korsleting baterai, LED tanpa resistor, resistor berdaya kecil di tegangan besar, Elco/Tantalum terbalik, kapasitor melewati tegangan kerjanya, LED terbalik di tegangan besar.
 - **Tipe kapasitor**: Elco (elektrolit), Keramik, Tantalum, dan Film/Mylar, dipilih lewat selector di panel Inspektor. Kapasitansi diketik manual (bawaan 10 µF). **Elco dan Tantalum berkutub** (pin 1 = +): bila dipasang terbalik, tegangannya terjepit sekitar −1 V, arus mengalir, dan muncul peringatan. Keramik dan Film tidak berkutub.
 - **Nama pin**: tekan sebuah pin untuk melihat namanya (+ / −, Anoda / Katoda, Kaki 1 / 2, dan seterusnya) sesuai komponen aslinya.
 - **Pick parts**: menu pemilih komponen dengan pencarian dan kategori (Daya, Pasif, Semikonduktor, Kontrol), plus daftar komponen yang terakhir dipakai.
@@ -24,6 +25,20 @@ Urutan pemuatan di `index.html` wajib: `core.js`, `scope.js`, `editor.js`, `app.
 - Pembacaan tegangan, arus, dan daya per komponen.
 - **Osiloskop digital** seperti aslinya: layar 10 x 8 div, **Volt/div** (10 mV sampai 50 V) dan **Time/div** (100 µs sampai 500 ms), pemicu (mode Auto / Normal / Single, tepi naik atau turun, level), **Posisi Y**, tombol Run/Stop, dan **Autoset**. Sinyal berulang tampil diam karena disinkronkan ke pemicu. Hasil ukur: Vpp, Max, Min, dan frekuensi.
 - Contoh rangkaian siap pakai, simpan/muat (localStorage), tema terang/gelap.
+
+## Batas komponen (model panas)
+Pada daya nominal, suhu naik 60 °C di atas suhu ruang (25 °C); pemanasan punya konstanta waktu sekitar 1,5 detik. Komponen meledak saat suhunya mencapai batas.
+
+| Komponen | Daya nominal | Meledak di | Tambahan |
+|---|---|---|---|
+| Resistor | 0,25 W | 170 °C | |
+| Induktor | 0,5 W (rugi kawat 0,5 Ω × I²) | 160 °C | |
+| LED | 0,06 W | 120 °C | tegangan balik > 5 V memanaskan cepat |
+| Dioda | 1 W | 150 °C | |
+| Kapasitor | 0,25 W | 105 °C | polaritas terbalik (Elco/Tantalum) dan tegangan melebihi batas (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V) memanaskan cepat |
+| Baterai / Sumber AC | 5 W | 100 °C | arus besar (korsleting) |
+
+Nilai ini perkiraan untuk tujuan belajar, bukan data lembar data komponen tertentu.
 
 ## Menjalankan
 Buka `index.html` di browser (folder `assets/` harus ikut berada di sebelahnya), atau lewat GitHub Pages / InfinityFree (lihat di bawah).
