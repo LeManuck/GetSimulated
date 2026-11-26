@@ -1,4 +1,4 @@
-// GetSimulated: inti. Data komponen, state, utilitas, rute kabel, dan solver MNA.
+// GetSimulated: inti. Data komponen, state, utilitas, rute kabel, solver MNA, serta model panas dan kerusakan komponen.
 // Dimuat pertama; file lain (scope.js, editor.js, app.js) memakai variabel global dari sini.
 
 let G = 24;
@@ -98,7 +98,8 @@ const S = {
   rc: [3, 6, 0, 2],
   wd: null,
   hv: null,
-  ptag: null
+  ptag: null,
+  fx: []
 };
 const WP = () => S.wires.flatMap(w => [w[0], w[1]]);
 let net = null;
@@ -293,7 +294,9 @@ function target(px, py, c0, t0, ex) {
   return null;
 }
 
-function build() {
+// build() membangun ulang jaringan dan MENGULANG simulasi dari nol (tegangan, arus, suhu, komponen rusak diganti baru).
+// build(true) hanya membangun ulang jaringan (dipakai saat komponen meledak) tanpa mengulang simulasi.
+function build(keep) {
   const par = {}, f = k => par[k] === k ? k : (par[k] = f(par[k])), add = k => { if (!(k in par)) par[k] = k; };
   S.comps.forEach(c => term(c).forEach(p => add(K(p))));
   S.wires.forEach(w => { add(K(w[0])); add(K(w[1])); par[f(K(w[0]))] = f(K(w[1])); });
@@ -302,8 +305,10 @@ function build() {
       if (onSeg(p, w[0], w[1])) par[f(K(p))] = f(K(w[0]));
     }
   }
-  S.comps.forEach(c => { c.v = 0; c.i = 0; c.vd = 0; });
-  S.t = 0; scopeReset();
+  if (!keep) {
+    S.comps.forEach(c => { c.v = 0; c.i = 0; c.vd = 0; c.T = TAMB; c.P = 0; c.pa = c.pn = 0; c.dead = false; c.why = ''; c.smk = 0; });
+    S.t = 0; scopeReset();
+  }
   const gc = S.comps.find(c => c.t == 'G');
   if (!gc) { net = null; return; }
   const gr = f(K(term(gc)[0])), idx = {};
@@ -315,7 +320,8 @@ function build() {
   const nd = p => idx[f(K(p))];
   net = {
     n,
-    els: S.comps.filter(c => c.t != 'G').map(c => {
+    // komponen rusak (meledak) diperlakukan sebagai rangkaian terbuka
+    els: S.comps.filter(c => c.t != 'G' && !c.dead).map(c => {
       const [a, b] = term(c), e = { c, a: nd(a), b: nd(b) };
       if (c.t == 'V' || c.t == 'A') e.k = m++;
       return e;
@@ -419,4 +425,120 @@ function step() {
     c.v = v;
   }
   S.t += dt;
+}
+
+// ---------- Panas dan kerusakan komponen ----------
+// Tiap komponen punya suhu (c.T). Daya yang diserap memanaskannya, dan suhu ikut turun saat daya mengecil.
+// Pr = daya nominal (W): pada daya ini suhu naik 60 °C di atas suhu ruang. Tmax = suhu rusak (komponen meledak).
+// Komponen yang meledak (c.dead) dianggap terbuka (putus) sampai rangkaian diedit atau Reset Simulasi ditekan.
+const TAMB = 25;
+const THAU = 1.5; // konstanta waktu pemanasan, detik nyata
+const TH = {
+  R: { Pr: .25, Tmax: 170 },
+  L: { Pr: .5, Tmax: 160 },
+  D: { Pr: .06, Tmax: 120 },
+  J: { Pr: 1, Tmax: 150 },
+  C: { Pr: .25, Tmax: 105 },
+  V: { Pr: 5, Tmax: 100 },
+  A: { Pr: 5, Tmax: 100 }
+};
+const CAPV = { elco: 16, cer: 50, tan: 10, film: 63 }; // tegangan kerja maksimum per tipe kapasitor (V)
+
+// Daya pemanasan efektif (W). Induktor: rugi tembaga (hambatan kawat 0,5 Ω). LED: tegangan balik > 5 V merusak.
+// Kapasitor: polaritas terbalik dan tegangan melebihi batas memanaskan dengan cepat.
+function pwr(c) {
+  const v = c.v, i = c.i, p = Math.abs(v * i);
+  if (c.t == 'L') return i * i * .5;
+  if (c.t == 'D') return p + (v < -5 ? .5 : 0);
+  if (c.t == 'C') {
+    let q = p;
+    if (ctype(c).pol && v < -.7) q += 20 * Math.abs(i);
+    const vm = CAPV[capKey(c)];
+    if (Math.abs(v) > vm) q += TH.C.Pr * 4 * (v / vm) ** 2;
+    return q;
+  }
+  return p;
+}
+
+// Dipanggil tiap langkah simulasi: kumpulkan daya rata-rata per komponen
+function heatAcc() {
+  for (const e of net.els) {
+    const c = e.c;
+    if (!TH[c.t]) continue;
+    c.pa = (c.pa || 0) + pwr(c);
+    c.pn = (c.pn || 0) + 1;
+  }
+}
+
+function whyOf(c, P) {
+  const v = Math.abs(c.v), i = Math.abs(c.i);
+  if (c.t == 'C') {
+    const vm = CAPV[capKey(c)];
+    if (v > vm) return 'tegangan ' + fmt(v, 'V') + ' melebihi batas ' + vm + 'V';
+    if (ctype(c).pol && c.v < -.7) return 'dipasang terbalik (polaritas salah)';
+    return 'terlalu panas';
+  }
+  if (c.t == 'D' && c.v < -5) return 'tegangan balik terlalu besar';
+  if (c.t == 'V' || c.t == 'A') return 'arus ' + fmt(i, 'A') + ' terlalu besar (korsleting?)';
+  if (c.t == 'D' || c.t == 'J' || c.t == 'L') return 'arus ' + fmt(i, 'A') + ' terlalu besar';
+  return 'daya ' + fmt(P, 'W') + ' melebihi rating ' + fmt(TH[c.t].Pr, 'W');
+}
+
+// Dipanggil sekali per bingkai (dt = detik nyata): perbarui suhu, ledakkan komponen yang melewati batas
+function heatStep(dt) {
+  if (!net) return;
+  const k = 1 - Math.exp(-dt / THAU);
+  for (const e of net.els) {
+    const c = e.c, th = TH[c.t];
+    if (!th || c.dead || !c.pn) continue;
+    let P = c.pa / c.pn;
+    c.pa = c.pn = 0;
+    if (!isFinite(P)) P = 1e6;
+    c.P = P;
+    if (c.T == null) c.T = TAMB;
+    c.T += (TAMB + P * 60 / th.Pr - c.T) * k;
+    if (c.T >= th.Tmax) boom(c, whyOf(c, P));
+  }
+}
+
+function boom(c, why) {
+  c.dead = true;
+  c.why = why;
+  c.v = c.i = c.vd = 0;
+  c.T = TH[c.t].Tmax;
+  c.smk = 6;
+  const d = D[c.r], x = (c.x + d[0] * 1.5) * G, y = (c.y + d[1] * 1.5) * G;
+  S.fx.push({ k: 'flash', x, y, life: .4, max: .4 });
+  for (let i = 0; i < 36; i++) {
+    const a = Math.random() * 6.283, s = 80 + Math.random() * 220, l = .5 + Math.random() * .6;
+    S.fx.push({ k: 'spark', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, life: l, max: l });
+  }
+  for (let i = 0; i < 14; i++) {
+    const l = 1.6 + Math.random() * 1.4;
+    S.fx.push({ k: 'smoke', x: x + (Math.random() - .5) * 14, y: y + (Math.random() - .5) * 10, vx: (Math.random() - .5) * 20, vy: -20 - Math.random() * 30, life: l, max: l, r: 6 + Math.random() * 6 });
+  }
+  build(true);
+  note('💥 ' + T[c.t].n + ' meledak: ' + why);
+  if (S.sel === c) ui();
+}
+
+// Animasi efek ledakan: percikan, kilatan, dan asap (asap tipis terus keluar dari komponen rusak beberapa detik)
+function updFx(dt) {
+  const f = S.fx;
+  for (let i = f.length - 1; i >= 0; i--) {
+    const p = f[i];
+    p.life -= dt;
+    if (p.life <= 0) { f.splice(i, 1); continue; }
+    if (p.k != 'flash') { p.x += p.vx * dt; p.y += p.vy * dt; }
+    if (p.k == 'spark') p.vy += 400 * dt;
+  }
+  if (f.length > 400) return;
+  for (const c of S.comps) {
+    if (!c.dead || !(c.smk > 0)) continue;
+    c.smk -= dt;
+    if (Math.random() < dt * 6) {
+      const d = D[c.r], l = 1.4 + Math.random();
+      f.push({ k: 'smoke', x: (c.x + d[0] * 1.5) * G + (Math.random() - .5) * 10, y: (c.y + d[1] * 1.5) * G, vx: (Math.random() - .5) * 10, vy: -18 - Math.random() * 14, life: l, max: l, r: 4 + Math.random() * 4 });
+    }
+  }
 }
