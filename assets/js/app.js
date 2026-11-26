@@ -145,6 +145,7 @@ function ui() {
           <ul class="guide-list">
             <li><b>Tekan dan seret dari pin</b> (titik biru di ujung komponen) ke pin komponen lain untuk menyambung kabel.</li>
             <li>Klik kabel untuk memilihnya: <b>seret titik tengah garis untuk menekuk</b>, atau seret ujungnya ke pin lain. Tekan <strong>Hapus (Del)</strong> untuk menghapus.</li>
+            <li>Rangkaian yang salah (korsleting, kapasitor terbalik, tanpa resistor) membuat komponen <b>panas lalu meledak</b>.</li>
           </ul>
         </div>
       </div>`;
@@ -186,8 +187,12 @@ function ui() {
       <div class="card-header">
         <span class="card-title">${ico(c.t, 18)} ${t.n}</span>
         <span style="font-size:11px; padding:2px 8px; border-radius:999px; background:var(--ac-subtle); color:var(--ac); font-weight:600;">Terpilih</span>
-      </div>
-      <div class="prop-group">`;
+      </div>`;
+
+  if (c.dead) {
+    h += `<div class="dead-box"><b>💥 Komponen rusak</b><br>${t.n} ${c.why}.<br>Perbaiki rangkaian, lalu tekan <b>Reset Simulasi</b>.</div>`;
+  }
+  h += '<div class="prop-group">';
 
   if (c.t == 'S') {
     h += `<button class="${c.on ? 'on' : ''}" style="width:100%; min-height:36px;" onclick="S.sel.on=!S.sel.on;ui()">
@@ -229,6 +234,16 @@ function ui() {
               </select>
             </div>`;
     }
+  }
+
+  // Indikator suhu kecil di dekat pengaturan nilai komponen (diperbarui tiap bingkai di loop())
+  if (TH[c.t]) {
+    h += `<div class="temp-row" title="Suhu komponen">
+            <label>Suhu</label>
+            <div class="temp-bar"><i id="tf"></i></div>
+            <b id="tt">${Math.round(c.T ?? TAMB)}°C</b>
+          </div>
+          <div class="temp-note" id="tl"></div>`;
   }
   h += '</div>';
 
@@ -445,6 +460,20 @@ function draw() {
     cx.save();
     cx.translate(c.x * G, c.y * G);
     cx.rotate(c.r * Math.PI / 2);
+
+    // Cahaya oranye di belakang komponen yang mulai panas (makin terang makin dekat batas rusak)
+    const th = TH[c.t];
+    const hh = th && !c.dead ? Math.min(1, Math.max(0, ((c.T ?? TAMB) - 55) / (th.Tmax - 55))) : 0;
+    if (hh > 0) {
+      cx.save();
+      cx.shadowBlur = 0;
+      const gr = cx.createRadialGradient(m, 0, 4, m, 0, 34);
+      gr.addColorStop(0, `rgba(255,90,20,${.55 * hh})`);
+      gr.addColorStop(1, 'rgba(255,90,20,0)');
+      cx.fillStyle = gr;
+      cx.beginPath(); cx.arc(m, 0, 34, 0, 7); cx.fill();
+      cx.restore();
+    }
     cx.beginPath();
 
     if (S.real && c.t != 'G') real(c, L, m);
@@ -513,6 +542,20 @@ function draw() {
       cx.font = 'bold 11px system-ui';
       cx.fillText('+', m - 14, -6);
     }
+
+    // Komponen yang sudah meledak: gosong dengan tanda silang
+    if (c.dead) {
+      cx.save();
+      cx.fillStyle = 'rgba(15,15,15,.8)';
+      cx.beginPath(); cx.arc(m, 0, 15, 0, 7); cx.fill();
+      cx.strokeStyle = '#f97316';
+      cx.lineWidth = 2;
+      cx.beginPath();
+      cx.moveTo(m - 7, -7); cx.lineTo(m + 7, 7);
+      cx.moveTo(m + 7, -7); cx.lineTo(m - 7, 7);
+      cx.stroke();
+      cx.restore();
+    }
     cx.restore();
 
     if (c.t == 'G') continue;
@@ -524,8 +567,8 @@ function draw() {
     const hz = d[1] == 0;
     const nI = T[c.t].nm ? T[c.t].p.indexOf(c.val) : -1;
     const pre = c.t == 'C' ? ctype(c).s + ' ' : nI >= 0 ? T[c.t].nm[nI] + ' ' : '';
-    const l1 = c.t == 'S' ? (c.on ? 'ON' : 'OFF') : pre + fmt(c.val, T[c.t].u) + (c.t == 'A' ? ' ' + fmt(c.f, 'Hz') : '');
-    const l2 = fmt(c.v, 'V') + '  ' + fmt(c.i, 'A');
+    const l1 = c.dead ? 'RUSAK' : c.t == 'S' ? (c.on ? 'ON' : 'OFF') : pre + fmt(c.val, T[c.t].u) + (c.t == 'A' ? ' ' + fmt(c.f, 'Hz') : '');
+    const l2 = c.dead ? 'meledak' : fmt(c.v, 'V') + '  ' + fmt(c.i, 'A');
 
     cx.font = '600 11.5px ui-monospace, "SF Mono", Consolas, monospace';
     const tx = hz ? mx : mx + 16;
@@ -550,7 +593,7 @@ function draw() {
     cx.stroke();
 
     cx.textAlign = hz ? 'center' : 'left';
-    cx.fillStyle = fg;
+    cx.fillStyle = c.dead ? '#f97316' : fg;
     cx.font = '600 11.5px ui-monospace, "SF Mono", Consolas, monospace';
     cx.fillText(l1, tx, ty);
 
@@ -649,6 +692,31 @@ function draw() {
     }
   }
 
+  // Efek ledakan: kilatan, percikan api, dan asap
+  for (const p of S.fx) {
+    const f = p.life / p.max;
+    cx.save();
+    cx.shadowBlur = 0;
+    if (p.k == 'flash') {
+      const r = 20 + (1 - f) * 60;
+      const g = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, `rgba(255,240,180,${f})`);
+      g.addColorStop(.5, `rgba(255,140,30,${f * .6})`);
+      g.addColorStop(1, 'rgba(255,80,0,0)');
+      cx.fillStyle = g;
+      cx.beginPath(); cx.arc(p.x, p.y, r, 0, 7); cx.fill();
+    } else if (p.k == 'spark') {
+      cx.globalAlpha = Math.min(1, f * 1.5);
+      cx.fillStyle = f > .5 ? '#fde047' : '#fb923c';
+      cx.beginPath(); cx.arc(p.x, p.y, 2.2, 0, 7); cx.fill();
+    } else {
+      cx.globalAlpha = f * .45;
+      cx.fillStyle = '#6b7280';
+      cx.beginPath(); cx.arc(p.x, p.y, p.r * (1 + (1 - f) * 1.6), 0, 7); cx.fill();
+    }
+    cx.restore();
+  }
+
   // Nama pin: muncul saat pin ditekan (dan pin tujuan saat menyambung), tetap terlihat sebentar setelah dilepas
   const tags = [], pt = S.ptag;
   if (pt && S.comps.includes(pt.c) && performance.now() < pt.until) tags.push([pt.c, pt.t]);
@@ -677,20 +745,29 @@ function draw() {
 }
 
 function loop() {
+  const now = performance.now(), dtf = Math.min(.1, (now - (S.lt || now)) / 1000);
+  S.lt = now;
+
   if (S.run && net) {
     for (let i = 0; i < 50; i++) {
       step();
+      heatAcc();
       if (S.sel) scopeFeed();
     }
+    heatStep(dtf);
   }
+  updFx(dtf);
 
   // Update clock
   $('#clock-text').textContent = fmt(S.t, 's');
 
   // Status & Warning badge
+  const hot = S.comps.some(c => !c.dead && TH[c.t] && (c.T ?? TAMB) > .8 * TH[c.t].Tmax);
   const w = !net ? 'Tambahkan komponen GND agar simulasi berjalan' :
+            S.comps.some(c => c.dead) ? 'Ada komponen rusak. Perbaiki rangkaian, lalu tekan Reset Simulasi' :
             S.comps.some(c => c.t == 'D' && c.i > .03) ? 'Peringatan: LED kelebihan arus (>30mA)' :
-            S.comps.some(c => c.t == 'C' && ctype(c).pol && c.v < -.5) ? 'Peringatan: kapasitor berkutub terpasang terbalik' : '';
+            S.comps.some(c => c.t == 'C' && ctype(c).pol && c.v < -.5) ? 'Peringatan: kapasitor berkutub terpasang terbalik' :
+            hot ? 'Peringatan: ada komponen hampir rusak karena panas' : '';
   const sb = $('#st');
   sb.className = w ? 'w' : '';
   const idle = S.tool != 'sel' ? `Ketuk kanvas untuk menaruh ${T[S.tool].n} (Esc untuk batal)` : 'Kanvas Siap';
@@ -703,6 +780,18 @@ function loop() {
     $('#rv').textContent = fmt(c.v, 'V');
     $('#ri').textContent = fmt(c.i, 'A');
     $('#rp').textContent = fmt(Math.abs(c.v * c.i), 'W');
+  }
+
+  // Indikator suhu komponen terpilih
+  if (c && TH[c.t] && $('#tt')) {
+    const th = TH[c.t], t0 = c.T ?? TAMB;
+    const f = Math.max(0, Math.min(1, (t0 - TAMB) / (th.Tmax - TAMB)));
+    $('#tt').textContent = c.dead ? 'Rusak' : Math.round(t0) + '°C';
+    $('#tf').style.width = (c.dead ? 100 : Math.max(3, f * 100)) + '%';
+    $('#tf').style.background = c.dead ? '#475569' : `hsl(${Math.round(120 - 120 * f)}, 80%, 45%)`;
+    $('#tl').textContent = c.t == 'C'
+      ? `Tegangan ${fmt(Math.abs(c.v), 'V')} dari maks ${CAPV[capKey(c)]}V · rusak di ${th.Tmax}°C`
+      : `Daya ${fmt(c.P || 0, 'W')} · nominal ${fmt(th.Pr, 'W')} · rusak di ${th.Tmax}°C`;
   }
 
   draw();
