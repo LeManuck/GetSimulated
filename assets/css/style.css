@@ -414,6 +414,55 @@ main {
 .prop-row input, .prop-row select {
   flex: 1;
 }
+.temp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.temp-row label {
+  font-size: 11.5px;
+  color: var(--mu);
+  min-width: 75px;
+}
+.temp-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  overflow: hidden;
+}
+.temp-bar i {
+  display: block;
+  height: 100%;
+  width: 3%;
+  background: #22c55e;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+.temp-row b {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  min-width: 46px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.temp-note {
+  font-size: 10.5px;
+  color: var(--mu);
+  margin-top: -4px;
+  padding-left: 83px;
+}
+.dead-box {
+  background: var(--wb);
+  color: var(--wf);
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .dmm-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
