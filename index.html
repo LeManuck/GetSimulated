@@ -5,7 +5,7 @@
 <title>GetSimulated - Simulator Rangkaian Elektronik</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Simulator rangkaian elektronik berbasis web interaktif dengan MNA solver dan transient simulation.">
-<link rel="stylesheet" href="assets/css/style.css?v=20261125">
+<link rel="stylesheet" href="assets/css/style.css?v=20261126">
 </head>
 <body>
 
@@ -17,7 +17,7 @@
       </svg>
     </div>
     <div class="brand-info">
-      <span class="brand-name">GetSimulated <span class="badge-ver">v1.9</span></span>
+      <span class="brand-name">GetSimulated <span class="badge-ver">v1.10</span></span>
       <span class="brand-sub">Simulator Rangkaian Elektronik</span>
     </div>
   </div>
@@ -83,7 +83,7 @@
         <button onclick="save()" title="Simpan ke browser">⇩ Simpan</button>
         <button onclick="load()" title="Muat dari browser">⇧ Muat</button>
       </div>
-      <button onclick="build();note('Simulasi direset')" style="width: 100%; margin-top: 6px;" title="Reset rangkaian">⟲ Reset Simulasi</button>
+      <button onclick="build();note('Simulasi direset')" style="width: 100%; margin-top: 6px;" title="Reset rangkaian (komponen rusak diganti baru)">⟲ Reset Simulasi</button>
     </div>
   </aside>
 
@@ -198,6 +198,7 @@
           <li><b>Nama pin:</b> tekan sebuah pin untuk melihat namanya (misalnya + / − atau Anoda / Katoda).</li>
           <li><b>Menghapus:</b> pilih komponen atau kabel, lalu tekan Delete.</li>
           <li><b>Osiloskop:</b> pilih komponen untuk melihat tegangannya. Tekan Autoset agar skala menyesuaikan sinyal.</li>
+          <li><b>Panas dan ledakan:</b> pilih komponen untuk melihat suhunya. Korsleting, LED tanpa resistor, atau kapasitor terbalik membuatnya panas lalu meledak. Perbaiki rangkaian, lalu tekan Reset Simulasi.</li>
         </ul>
       </div>
     </div>
@@ -205,9 +206,9 @@
 </div>
 
 <!-- Urutan wajib: core (data + solver) -> scope -> editor -> app (UI + boot) -->
-<script src="assets/js/core.js?v=20261125"></script>
-<script src="assets/js/scope.js?v=20261125"></script>
-<script src="assets/js/editor.js?v=20261125"></script>
-<script src="assets/js/app.js?v=20261125"></script>
+<script src="assets/js/core.js?v=20261126"></script>
+<script src="assets/js/scope.js?v=20261126"></script>
+<script src="assets/js/editor.js?v=20261126"></script>
+<script src="assets/js/app.js?v=20261126"></script>
 </body>
 </html>
