@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-11-26: v1.10.0, Model Panas per Komponen, Ledakan Saat Rangkaian Salah, Indikator Suhu (Claude)
+**Dilakukan** (file: `assets/js/core.js`, `assets/js/app.js`, `assets/css/style.css`, `index.html`, `README.md`, `LOG.md`; langsung ke `main`; `editor.js` dan `scope.js` tidak diubah)
+- **Model panas.** Tiap komponen (Resistor, Induktor, LED, Dioda, Kapasitor, Baterai, Sumber AC) punya suhu `c.T`. Daya efektif dirata-rata dari 50 langkah simulasi per bingkai, lalu suhu mendekati `25 °C + P × 60 / Pnominal` dengan konstanta waktu 1,5 detik nyata. Pada daya nominal suhu naik 60 °C. Saklar dan GND tidak dimodelkan.
+- **Ledakan.** Saat suhu mencapai batas (`Tmax`), komponen meledak: kilatan, 36 percikan api, asap yang terus keluar sekitar 6 detik, tanda silang gosong di komponen, label menjadi "RUSAK / meledak", dan pesan penyebab di status kanvas. Komponen rusak menjadi **rangkaian terbuka** (dikeluarkan dari solver); jaringan dibangun ulang dengan `build(true)` tanpa mengulang simulasi, jadi tegangan kapasitor dan waktu simulasi tetap berjalan.
+- **Kesalahan rangkaian yang memicu ledakan** (diperkirakan, belum diuji di browser): baterai dikorsleting (arus ratusan ampere), LED langsung ke baterai tanpa resistor, resistor 0,25 W di arus besar (misalnya 22 Ω di 9 V), induktor langsung di baterai (tanpa hambatan), Elco/Tantalum terpasang terbalik dengan arus cukup besar (pemanasan 20 W per ampere), kapasitor melewati tegangan kerja (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V), LED terbalik di atas 5 V.
+- **Indikator suhu kecil** di panel Inspektor, di dalam blok pengaturan nilai komponen (di bawah selector/input nilai): batang gradasi hijau ke merah, angka °C, dan satu baris keterangan (daya dan nominal, atau tegangan dan batas untuk kapasitor, plus suhu rusak). Untuk komponen rusak tampil "Rusak" dengan batang abu-abu penuh, ditambah kotak peringatan "Komponen rusak" berisi penyebab.
+- **Cahaya oranye** di belakang komponen yang mulai panas (mulai 55 °C, makin terang mendekati batas), dan peringatan di status kanvas bila ada komponen di atas 80% suhu rusak, atau bila ada komponen rusak ("Perbaiki rangkaian, lalu tekan Reset Simulasi").
+- **Semantik build():** `build()` tanpa argumen kini juga memulihkan semua komponen rusak dan mendinginkan suhu (mengulang simulasi dari nol), sehingga mengedit rangkaian, undo/redo, memuat, Reset Simulasi, dan memilih contoh rangkaian otomatis "mengganti komponen baru". Satu konsekuensinya: menggeser komponen rusak ikut memulihkannya. `build(true)` dipakai hanya oleh ledakan.
+- Tips di jendela Bantuan dan Panduan Cepat menyebut panas dan ledakan. Badge versi v1.10, `?v=` di `index.html` dinaikkan ke `20261126`. `README.md`: fitur baru dan tabel batas komponen.
+- Contoh rangkaian bawaan dihitung manual agar tidak meledak: LED+resistor (LED sekitar 65 °C, resistor sekitar 62 °C, baterai sekitar 27 °C), RC (daya kecil), penyearah (daya kecil, Elco di polaritas benar, tegangan puncak 5 V < 16 V).
+
+**Pengujian**
+- BELUM diuji. Dibuat lewat konektor GitHub tanpa browser dan tanpa Node, jadi `node --check` dan uji di browser belum dijalankan; kode hanya ditinjau manual. Parameter (nominal, batas, konstanta waktu) adalah perkiraan dan belum dikalibrasi lewat simulasi.
+- Mohon coba setelah deploy: (1) contoh LED+resistor: pastikan tidak ada ledakan dan indikator suhu bergerak; (2) hubungkan baterai langsung ke GND (korsleting): baterai harus meledak; (3) ganti resistor 330 Ω menjadi 10 Ω di contoh 1: resistor lalu LED harus meledak; (4) balik Elco di contoh RC; (5) tekan Reset Simulasi dan pastikan semua pulih; (6) cek console browser untuk error.
+
+**Catatan / keterbatasan**
+- Fisika disederhanakan: tidak ada hambatan dalam baterai nyata (hanya 10 mΩ), tidak ada sekering, tidak ada efek suhu pada nilai komponen, dan induktor ideal tanpa hambatan akan meledak jika langsung ke sumber DC.
+- Suhu hanya berubah selama simulasi berjalan (tidak mendingin saat dijeda).
+- Bila ledakan terlalu mudah atau terlalu sulit terpicu, parameter ada di tabel `TH` dan `CAPV` di `core.js` (`Pr`, `Tmax`) serta `THAU`.
+- Efek ledakan dibatasi sekitar 400 partikel; komponen rusak tetap tampil gosong sampai rangkaian diedit atau direset.
+
+---
+
 ## 2026-11-25: Pisahkan index.html menjadi CSS dan beberapa file JS di folder assets/ (Claude)
 **Dilakukan** (file: `index.html`, `assets/css/style.css` baru, `assets/js/core.js` baru, `assets/js/scope.js` baru, `assets/js/editor.js` baru, `assets/js/app.js` baru, `README.md`, `LOG.md`; dikirim langsung ke `main` atas permintaan pemilik repo)
 - `index.html` dari satu file ±85 KB menjadi kerangka HTML (±9 KB) yang memuat `assets/css/style.css` dan empat skrip klasik berurutan: `core.js` (data komponen, state, util, rute kabel, solver MNA), `scope.js` (osiloskop: akuisisi, pemicu, Autoset, `drawScope`), `editor.js` (pointer/zoom, undo/redo, simpan/muat, keyboard), `app.js` (toolbar, Pick Parts, Inspektor, gambar kanvas, loop, boot).
