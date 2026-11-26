@@ -6,11 +6,31 @@
 
 ---
 
+## 2026-11-27: v1.10.1, Perbaikan: Baterai Tidak Meledak Saat Kutub + Disambung Langsung ke − (Claude)
+**Masalah** (dilaporkan pemilik repo): baterai yang kutub + dan −nya disambung langsung dengan kabel tidak meledak.
+
+**Penyebab**: panas komponen dihitung dari `|tegangan terminal × arus|`. Pada korsleting, kabel membuat kedua kutub satu simpul, sehingga tegangan terminal = 0 V walau solver menghitung arus sekitar 900 A (9 V / 10 mΩ hambatan dalam di solver). Hasilnya daya = 0 × 900 = 0 W, jadi suhu tidak pernah naik.
+
+**Dilakukan** (file: `assets/js/core.js`, `index.html`, `README.md`, `LOG.md`; `app.js`, `style.css`, `editor.js`, `scope.js` tidak diubah)
+- `pwr()` untuk Baterai dan Sumber AC kini memakai **rugi hambatan dalam 1 Ω × I²** (hanya untuk perhitungan panas; hitungan listrik di solver tetap memakai 10 mΩ). Korsleting 900 A menjadi sekitar 810 kW, jadi baterai meledak pada bingkai pertama.
+- Daya nominal Baterai dan Sumber AC diturunkan dari 5 W ke **2 W** (batas meledak 100 °C tetap). Akibatnya, secara kasar, arus terus-menerus sekitar 1,6 A atau lebih akan memanaskan baterai sampai meledak dalam beberapa detik; beban ringan (puluhan mA) tidak berpengaruh. Contoh rangkaian bawaan tidak terpengaruh (arus 21,7 mA atau lebih kecil, panas sekitar 0,5 mW).
+- Komentar kode dan `README.md` (tabel batas komponen) diperbarui. Nilai `?v=` di `index.html` dinaikkan ke `20261127` agar browser mengambil `core.js` yang baru.
+- Indikator suhu baterai di Inspektor menampilkan "Daya" = nilai efektif ini (I² × 1 Ω), bukan daya keluaran v × i, sehingga angka di kartu DMM "Daya (P)" dan di indikator suhu bisa berbeda untuk baterai.
+
+**Pengujian**
+- BELUM diuji. Dibuat lewat konektor GitHub tanpa browser dan tanpa Node. Perhitungan manual: korsleting 900 A menghasilkan P efektif 8,1 × 10⁵ W, jadi suhu target jauh di atas batas dan batas 100 °C terlewati dalam satu bingkai (dt bingkai maks 0,1 s, konstanta waktu 1,5 s). Mohon coba: sambungkan kutub + dan − baterai langsung dengan kabel (baterai harus meledak), lalu Reset Simulasi, dan cek contoh bawaan masih tidak meledak.
+
+**Catatan / keterbatasan**
+- Rangkaian yang mengorsleting sumber lewat komponen lain (misalnya baterai langsung ke LED atau ke resistor sangat kecil) kini juga memanaskan baterai lewat I² × 1 Ω, jadi baterai ikut meledak selain komponen lainnya.
+- Sumber AC yang dikorsleting meledak dengan cara yang sama.
+
+---
+
 ## 2026-11-26: v1.10.0, Model Panas per Komponen, Ledakan Saat Rangkaian Salah, Indikator Suhu (Claude)
 **Dilakukan** (file: `assets/js/core.js`, `assets/js/app.js`, `assets/css/style.css`, `index.html`, `README.md`, `LOG.md`; langsung ke `main`; `editor.js` dan `scope.js` tidak diubah)
 - **Model panas.** Tiap komponen (Resistor, Induktor, LED, Dioda, Kapasitor, Baterai, Sumber AC) punya suhu `c.T`. Daya efektif dirata-rata dari 50 langkah simulasi per bingkai, lalu suhu mendekati `25 °C + P × 60 / Pnominal` dengan konstanta waktu 1,5 detik nyata. Pada daya nominal suhu naik 60 °C. Saklar dan GND tidak dimodelkan.
 - **Ledakan.** Saat suhu mencapai batas (`Tmax`), komponen meledak: kilatan, 36 percikan api, asap yang terus keluar sekitar 6 detik, tanda silang gosong di komponen, label menjadi "RUSAK / meledak", dan pesan penyebab di status kanvas. Komponen rusak menjadi **rangkaian terbuka** (dikeluarkan dari solver); jaringan dibangun ulang dengan `build(true)` tanpa mengulang simulasi, jadi tegangan kapasitor dan waktu simulasi tetap berjalan.
-- **Kesalahan rangkaian yang memicu ledakan** (diperkirakan, belum diuji di browser): baterai dikorsleting (arus ratusan ampere), LED langsung ke baterai tanpa resistor, resistor 0,25 W di arus besar (misalnya 22 Ω di 9 V), induktor langsung di baterai (tanpa hambatan), Elco/Tantalum terpasang terbalik dengan arus cukup besar (pemanasan 20 W per ampere), kapasitor melewati tegangan kerja (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V), LED terbalik di atas 5 V.
+- **Kesalahan rangkaian yang memicu ledakan** (diperkirakan, belum diuji di browser): baterai dikorsleting (arus ratusan ampere), LED langsung ke baterai tanpa resistor, resistor 0,25 W di arus besar (misalnya 22 Ω di 9 V), induktor langsung di baterai (tanpa hambatan), Elco/Tantalum terpasang terbalik dengan arus cukup besar (pemanasan 20 W per ampere), kapasitor melewati tegangan kerja (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V), LED terbalik di atas 5 V. (Catatan: korsleting baterai langsung ternyata belum terdeteksi pada versi ini, diperbaiki di v1.10.1.)
 - **Indikator suhu kecil** di panel Inspektor, di dalam blok pengaturan nilai komponen (di bawah selector/input nilai): batang gradasi hijau ke merah, angka °C, dan satu baris keterangan (daya dan nominal, atau tegangan dan batas untuk kapasitor, plus suhu rusak). Untuk komponen rusak tampil "Rusak" dengan batang abu-abu penuh, ditambah kotak peringatan "Komponen rusak" berisi penyebab.
 - **Cahaya oranye** di belakang komponen yang mulai panas (mulai 55 °C, makin terang mendekati batas), dan peringatan di status kanvas bila ada komponen di atas 80% suhu rusak, atau bila ada komponen rusak ("Perbaiki rangkaian, lalu tekan Reset Simulasi").
 - **Semantik build():** `build()` tanpa argumen kini juga memulihkan semua komponen rusak dan mendinginkan suhu (mengulang simulasi dari nol), sehingga mengedit rangkaian, undo/redo, memuat, Reset Simulasi, dan memilih contoh rangkaian otomatis "mengganti komponen baru". Satu konsekuensinya: menggeser komponen rusak ikut memulihkannya. `build(true)` dipakai hanya oleh ledakan.
