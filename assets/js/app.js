@@ -61,7 +61,11 @@ const PARTS = [
   ['L', 'Induktor', 'Pasif', 'kumparan inductor coil henry'],
   ['D', 'LED', 'Semikonduktor', 'lampu led light diode emisi cahaya merah kuning hijau biru'],
   ['J', 'Dioda', 'Semikonduktor', 'diode penyearah 1n4148 1n4007 schottky 1n5819 bat54'],
-  ['S', 'Saklar', 'Kontrol', 'switch tombol on off saklar switch']
+  ['S', 'Saklar', 'Kontrol', 'switch tombol on off saklar switch'],
+  ['Q', 'Transistor NPN', 'Semikonduktor', 'transistor bjt npn 2n3904 bc547 saklar penguat amplifier basis kolektor emitor'],
+  ['U', 'Transistor PNP', 'Semikonduktor', 'transistor bjt pnp 2n3906 bc557 saklar penguat amplifier basis kolektor emitor'],
+  ['M', 'MOSFET N-channel', 'Semikonduktor', 'mosfet fet nmos n-channel 2n7000 irlz44 irf saklar gate drain source'],
+  ['N', 'MOSFET P-channel', 'Semikonduktor', 'mosfet fet pmos p-channel irf9540 saklar gate drain source']
 ];
 
 let Q = '', CT = 'Semua';
@@ -146,6 +150,7 @@ function ui() {
             <li><b>Tekan dan seret dari pin</b> (titik biru di ujung komponen) ke pin komponen lain untuk menyambung kabel.</li>
             <li>Klik kabel untuk memilihnya: <b>seret titik tengah garis untuk menekuk</b>, atau seret ujungnya ke pin lain. Tekan <strong>Hapus (Del)</strong> untuk menghapus.</li>
             <li>Rangkaian yang salah (korsleting, kapasitor terbalik, tanpa resistor) membuat komponen <b>panas lalu meledak</b>.</li>
+            <li>Coba contoh <b>Transistor NPN</b> atau <b>MOSFET N sebagai saklar</b> di menu Contoh rangkaian.</li>
           </ul>
         </div>
       </div>`;
@@ -180,7 +185,8 @@ function ui() {
   // Selected Component Inspector
   const t = T[c.t];
   $('#dso-comp-badge').textContent = t.n;
-  const labelPreset = c.t == 'D' ? 'Warna LED' : c.t == 'J' ? 'Tipe Dioda' : 'Nilai Preset';
+  const labelPreset = c.t == 'D' ? 'Warna LED' : c.t == 'J' ? 'Tipe Dioda'
+    : (c.t == 'Q' || c.t == 'U') ? 'Penguatan hFE' : (c.t == 'M' || c.t == 'N') ? 'Threshold Vth' : 'Nilai Preset';
 
   let h = `
     <div class="card">
@@ -254,6 +260,10 @@ function ui() {
         <div class="dmm-card"><small>Arus (I)</small><b id="ri">0A</b></div>
         <div class="dmm-card"><small>Daya (P)</small><b id="rp">0W</b></div>
       </div>`;
+    if (is3(c)) {
+      // Komponen berkaki tiga: tegangan dan arus di kartu adalah Vce / Ic atau Vds / Id; sisanya di baris ini
+      h += '<div class="temp-note" id="tx" style="padding-left:0; margin:-6px 0 10px;"></div>';
+    }
   }
 
   h += `
@@ -294,6 +304,14 @@ new ResizeObserver(fit).observe(sc);
 const LED = c => c.val >= 2.8 ? '77,163,255' : c.val >= 2.05 ? '67,224,107' : c.val >= 1.95 ? '255,200,30' : '255,59,59';
 const BC = ['#111', '#7a4a21', '#d32f2f', '#f57c00', '#fbc02d', '#2e7d32', '#1976d2', '#7b1fa2', '#808080', '#fff'];
 
+// Kepala panah (garis terbuka) dengan ujung di (x, y) menghadap arah (ux, uy); menambah ke path yang sedang dibuat
+function arw(x, y, ux, uy) {
+  const nx = -uy, ny = ux;
+  cx.moveTo(x - ux * 9 + nx * 4.5, y - uy * 9 + ny * 4.5);
+  cx.lineTo(x, y);
+  cx.lineTo(x - ux * 9 - nx * 4.5, y - uy * 9 - ny * 4.5);
+}
+
 function real(c, L, m) {
   const ld = (a, b) => {
     cx.save(); cx.shadowBlur = 0; cx.strokeStyle = '#98a2b3'; cx.lineWidth = 2.5;
@@ -302,6 +320,18 @@ function real(c, L, m) {
   };
   const rr = (x, y, w, h, r, f) => {
     cx.beginPath(); cx.roundRect(x, y, w, h, r); cx.fillStyle = f; cx.fill();
+  };
+  // Tulisan tegak (diputar balik) agar tetap terbaca saat komponen diputar
+  const up = (s, x, y, col, px) => {
+    cx.save(); cx.translate(x, y); cx.rotate(-c.r * Math.PI / 2);
+    cx.font = `bold ${px}px system-ui`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillStyle = col; cx.fillText(s, 0, 0); cx.restore();
+  };
+  // Tiga kaki logam dari badan ke pin B/G (0,0), C/D (72,-48), E/S (72,48)
+  const legs3 = (bx, cx1, cy1, ex1, ey1) => {
+    cx.save(); cx.shadowBlur = 0; cx.strokeStyle = '#98a2b3'; cx.lineWidth = 2.5;
+    cx.beginPath(); cx.moveTo(0, 0); cx.lineTo(bx, 0); cx.moveTo(cx1, cy1); cx.lineTo(72, -48); cx.moveTo(ex1, ey1); cx.lineTo(72, 48);
+    cx.stroke(); cx.restore();
   };
   const t = c.t;
 
@@ -332,12 +362,7 @@ function real(c, L, m) {
     cx.fillStyle = '#ef4444'; cx.fillRect(m - 6, -10, 8, 20);
     rr(m + 16, -4, 4, 8, 1, '#c8ccd4');
   } else if (t == 'C') {
-    // Tanda polaritas digambar tegak (diputar balik) agar tetap terbaca saat komponen diputar
-    const lbl = (s, x, col, px) => {
-      cx.save(); cx.translate(x, 0); cx.rotate(-c.r * Math.PI / 2);
-      cx.font = `bold ${px}px system-ui`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-      cx.fillStyle = col; cx.fillText(s, 0, 0); cx.restore();
-    };
+    const lbl = (s, x, col, px) => up(s, x, 0, col, px);
     const ck = capKey(c);
     if (ck == 'elco') {
       // Elco: silinder biru, pita (−) di sisi pin 2, tanda (+) di sisi pin 1
@@ -377,6 +402,19 @@ function real(c, L, m) {
     cx.strokeStyle = '#e8ecf5'; cx.lineWidth = 4; cx.beginPath();
     cx.moveTo(m, 0); cx.lineTo(m + k, -12); cx.stroke();
     cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(m + k, -12, 3, 0, 7); cx.fill();
+  } else if (t == 'Q' || t == 'U') {
+    // Transistor bipolar (seperti TO-92): badan hitam bersisi datar, tiga kaki ke B, C, E
+    legs3(26, 44, -8, 44, 8);
+    rr(24, -17, 24, 34, [14, 5, 5, 14], '#23262d'); cx.shadowBlur = 0;
+    rr(24, -17, 4, 34, [14, 0, 0, 14], 'rgba(255,255,255,.14)');
+    up(t == 'Q' ? 'NPN' : 'PNP', 37, 0, '#e2e8f0', 8);
+  } else if (t == 'M' || t == 'N') {
+    // MOSFET (seperti TO-220): badan hitam dengan pelat logam di sisi atas, tiga kaki ke G, D, S
+    legs3(20, 46, -8, 46, 8);
+    rr(18, -22, 30, 7, 2, '#b6bcc8'); cx.shadowBlur = 0;
+    cx.fillStyle = '#4b5563'; cx.beginPath(); cx.arc(33, -18.5, 2, 0, 7); cx.fill();
+    rr(18, -15, 30, 31, 3, '#23262d');
+    up(t == 'M' ? 'NMOS' : 'PMOS', 33, 1, '#e2e8f0', 8);
   }
   cx.beginPath();
 }
@@ -530,6 +568,26 @@ function draw() {
       cx.moveTo(0, 0); cx.lineTo(G, 0);
       cx.moveTo(2 * G, 0); cx.lineTo(L, 0);
       cx.moveTo(G, 0); cx.lineTo(c.on ? 2 * G : 2 * G - 4, c.on ? 0 : -14);
+    } else if (c.t == 'Q' || c.t == 'U') {
+      // Simbol transistor bipolar: panah emitor keluar dari basis (NPN) atau menuju basis (PNP)
+      cx.moveTo(0, 0); cx.lineTo(30, 0);
+      cx.moveTo(30, -16); cx.lineTo(30, 16);
+      cx.moveTo(30, -9); cx.lineTo(72, -48);
+      cx.moveTo(30, 9); cx.lineTo(72, 48);
+      const eux = 42 / 57.31, euy = 39 / 57.31;
+      if (c.t == 'Q') arw(30 + 42 * .66, 9 + 39 * .66, eux, euy);
+      else arw(30 + 42 * .3, 9 + 39 * .3, -eux, -euy);
+    } else if (c.t == 'M' || c.t == 'N') {
+      // Simbol MOSFET mode peningkatan: gate terpisah dari kanal bersegmen; panah substrat menunjukkan jenis kanal
+      cx.moveTo(0, 0); cx.lineTo(20, 0);
+      cx.moveTo(20, -16); cx.lineTo(20, 16);
+      cx.moveTo(28, -16); cx.lineTo(28, -9);
+      cx.moveTo(28, -4); cx.lineTo(28, 4);
+      cx.moveTo(28, 9); cx.lineTo(28, 16);
+      cx.moveTo(28, -13); cx.lineTo(72, -48);
+      cx.moveTo(28, 13); cx.lineTo(72, 48);
+      cx.moveTo(28, 0); cx.lineTo(40, 0);
+      if (c.t == 'M') arw(29, 0, -1, 0); else arw(40, 0, 1, 0);
     }
     cx.stroke();
     cx.shadowBlur = 0;
@@ -562,17 +620,27 @@ function draw() {
 
     // Component Text Labels with semi-transparent Pill Badges
     const d = D[c.r];
-    const mx = (c.x + d[0] * 1.5) * G;
-    const my = (c.y + d[1] * 1.5) * G;
-    const hz = d[1] == 0;
+    const t3 = is3(c);
+    let tx, ty, hz;
+    if (t3) {
+      // Komponen berkaki tiga: label di kiri-bawah badan (ikut berputar), tidak menabrak kaki C dan E
+      const q = lw(c, -22, 40);
+      tx = q[0]; ty = q[1]; hz = true;
+    } else {
+      const mx = (c.x + d[0] * 1.5) * G;
+      const my = (c.y + d[1] * 1.5) * G;
+      hz = d[1] == 0;
+      tx = hz ? mx : mx + 16;
+      ty = hz ? my - 20 : my - 4;
+    }
     const nI = T[c.t].nm ? T[c.t].p.indexOf(c.val) : -1;
     const pre = c.t == 'C' ? ctype(c).s + ' ' : nI >= 0 ? T[c.t].nm[nI] + ' ' : '';
-    const l1 = c.dead ? 'RUSAK' : c.t == 'S' ? (c.on ? 'ON' : 'OFF') : pre + fmt(c.val, T[c.t].u) + (c.t == 'A' ? ' ' + fmt(c.f, 'Hz') : '');
+    const name3 = c.t == 'Q' ? 'NPN hFE ' + fmt(c.val, '') : c.t == 'U' ? 'PNP hFE ' + fmt(c.val, '')
+      : c.t == 'M' ? 'NMOS Vth ' + fmt(c.val, 'V') : 'PMOS Vth ' + fmt(c.val, 'V');
+    const l1 = c.dead ? 'RUSAK' : t3 ? name3 : c.t == 'S' ? (c.on ? 'ON' : 'OFF') : pre + fmt(c.val, T[c.t].u) + (c.t == 'A' ? ' ' + fmt(c.f, 'Hz') : '');
     const l2 = c.dead ? 'meledak' : fmt(c.v, 'V') + '  ' + fmt(c.i, 'A');
 
     cx.font = '600 11.5px ui-monospace, "SF Mono", Consolas, monospace';
-    const tx = hz ? mx : mx + 16;
-    const ty = hz ? my - 20 : my - 4;
 
     const w1 = cx.measureText(l1).width;
     cx.font = '500 10.5px ui-monospace, "SF Mono", Consolas, monospace';
@@ -780,6 +848,11 @@ function loop() {
     $('#rv').textContent = fmt(c.v, 'V');
     $('#ri').textContent = fmt(c.i, 'A');
     $('#rp').textContent = fmt(Math.abs(c.v * c.i), 'W');
+  }
+  if (c && $('#tx')) {
+    $('#tx').textContent = c.t in BJT
+      ? `Vce ${fmt(c.v, 'V')} · Ic ${fmt(c.i, 'A')} · Vbe ${fmt(c.vbe, 'V')} · Ib ${fmt(c.ib, 'A')}`
+      : `Vds ${fmt(c.v, 'V')} · Id ${fmt(c.i, 'A')} · Vgs ${fmt(c.vgs, 'V')}`;
   }
 
   // Indikator suhu komponen terpilih
