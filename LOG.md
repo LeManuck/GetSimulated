@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-11-27: v1.10.2, Koreksi: LED/Dioda Terbalik Tidak Lagi Meledak (Claude)
+**Masalah** (pertanyaan pemilik repo): apakah LED yang dipasang terbalik memang meledak? Di v1.10.0 LED terbalik pada tegangan lebih dari 5 V diberi pemanasan tambahan 0,5 W (suhu naik sekitar 500 °C), sehingga selalu meledak, bahkan ketika ada resistor seri.
+
+**Penilaian**: itu berlebihan. Pada tegangan rendah LED terbalik umumnya hanya tidak menyala karena arus baliknya nyaris nol. Tegangan balik maksimum LED memang sekitar 5 V; di atas itu bisa terjadi tembus balik (breakdown) yang merusak LED bila arusnya tidak dibatasi, tetapi biasanya LED mati diam-diam, bukan meledak. Dengan resistor seri, arus tembusnya terbatas dan LED sering selamat. Model simulator tidak punya tembus balik, jadi tidak ada dasar memanaskan LED yang arusnya nol.
+
+**Dilakukan** (file: `assets/js/core.js`, `index.html`, `README.md`, `LOG.md`; `app.js`, `style.css`, `editor.js`, `scope.js` tidak diubah)
+- `pwr()`: baris penalti LED terbalik (`v < -5` menambah 0,5 W) dihapus. LED dan dioda kini dipanaskan hanya oleh v × i, sehingga terbalik = arus nyaris nol = suhu tetap rendah = hanya tidak menyala.
+- `whyOf()`: pesan "tegangan balik terlalu besar" dihapus (sudah tidak mungkin terjadi).
+- `README.md`: fitur dan tabel batas diperbarui (LED meledak karena arus maju berlebih, bukan karena terbalik; catatan bahwa model tembus balik belum ada). `?v=` di `index.html` dinaikkan ke `20261127-2`.
+- Yang TETAP meledak: kapasitor elektrolit/tantalum terbalik (pada kenyataannya memang bisa menggembung dan meledak), kapasitor melewati tegangan kerja, korsleting baterai, LED tanpa resistor (arus maju berlebih), dan resistor/induktor/dioda kelebihan daya.
+
+**Pengujian**
+- BELUM diuji. Dibuat lewat konektor GitHub tanpa browser dan tanpa Node. Perubahan hanya menghapus dua kondisi; mohon coba: balik LED di contoh LED+resistor (LED harus mati/tidak menyala dan tidak meledak), dan pastikan korsleting baterai serta Elco terbalik masih meledak.
+
+**Catatan / keterbatasan**
+- Belum ada model tembus balik: LED terbalik pada tegangan tinggi (misalnya 24 V tanpa resistor) tidak dirusak sama sekali. Menambahnya berarti mengubah model dioda di solver (konduksi balik di sekitar −5 V) dan baru layak dikerjakan bila diminta.
+- Belum ada peringatan di status kanvas untuk LED terbalik; bisa ditambahkan di `app.js` bila diinginkan.
+
+---
+
 ## 2026-11-27: v1.10.1, Perbaikan: Baterai Tidak Meledak Saat Kutub + Disambung Langsung ke − (Claude)
 **Masalah** (dilaporkan pemilik repo): baterai yang kutub + dan −nya disambung langsung dengan kabel tidak meledak.
 
@@ -30,7 +50,7 @@
 **Dilakukan** (file: `assets/js/core.js`, `assets/js/app.js`, `assets/css/style.css`, `index.html`, `README.md`, `LOG.md`; langsung ke `main`; `editor.js` dan `scope.js` tidak diubah)
 - **Model panas.** Tiap komponen (Resistor, Induktor, LED, Dioda, Kapasitor, Baterai, Sumber AC) punya suhu `c.T`. Daya efektif dirata-rata dari 50 langkah simulasi per bingkai, lalu suhu mendekati `25 °C + P × 60 / Pnominal` dengan konstanta waktu 1,5 detik nyata. Pada daya nominal suhu naik 60 °C. Saklar dan GND tidak dimodelkan.
 - **Ledakan.** Saat suhu mencapai batas (`Tmax`), komponen meledak: kilatan, 36 percikan api, asap yang terus keluar sekitar 6 detik, tanda silang gosong di komponen, label menjadi "RUSAK / meledak", dan pesan penyebab di status kanvas. Komponen rusak menjadi **rangkaian terbuka** (dikeluarkan dari solver); jaringan dibangun ulang dengan `build(true)` tanpa mengulang simulasi, jadi tegangan kapasitor dan waktu simulasi tetap berjalan.
-- **Kesalahan rangkaian yang memicu ledakan** (diperkirakan, belum diuji di browser): baterai dikorsleting (arus ratusan ampere), LED langsung ke baterai tanpa resistor, resistor 0,25 W di arus besar (misalnya 22 Ω di 9 V), induktor langsung di baterai (tanpa hambatan), Elco/Tantalum terpasang terbalik dengan arus cukup besar (pemanasan 20 W per ampere), kapasitor melewati tegangan kerja (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V), LED terbalik di atas 5 V. (Catatan: korsleting baterai langsung ternyata belum terdeteksi pada versi ini, diperbaiki di v1.10.1.)
+- **Kesalahan rangkaian yang memicu ledakan** (diperkirakan, belum diuji di browser): baterai dikorsleting (arus ratusan ampere), LED langsung ke baterai tanpa resistor, resistor 0,25 W di arus besar (misalnya 22 Ω di 9 V), induktor langsung di baterai (tanpa hambatan), Elco/Tantalum terpasang terbalik dengan arus cukup besar (pemanasan 20 W per ampere), kapasitor melewati tegangan kerja (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V), LED terbalik di atas 5 V. (Catatan: korsleting baterai langsung ternyata belum terdeteksi pada versi ini, diperbaiki di v1.10.1; LED terbalik dikoreksi di v1.10.2.)
 - **Indikator suhu kecil** di panel Inspektor, di dalam blok pengaturan nilai komponen (di bawah selector/input nilai): batang gradasi hijau ke merah, angka °C, dan satu baris keterangan (daya dan nominal, atau tegangan dan batas untuk kapasitor, plus suhu rusak). Untuk komponen rusak tampil "Rusak" dengan batang abu-abu penuh, ditambah kotak peringatan "Komponen rusak" berisi penyebab.
 - **Cahaya oranye** di belakang komponen yang mulai panas (mulai 55 °C, makin terang mendekati batas), dan peringatan di status kanvas bila ada komponen di atas 80% suhu rusak, atau bila ada komponen rusak ("Perbaiki rangkaian, lalu tekan Reset Simulasi").
 - **Semantik build():** `build()` tanpa argumen kini juga memulihkan semua komponen rusak dan mendinginkan suhu (mengulang simulasi dari nol), sehingga mengedit rangkaian, undo/redo, memuat, Reset Simulasi, dan memilih contoh rangkaian otomatis "mengganti komponen baru". Satu konsekuensinya: menggeser komponen rusak ikut memulihkannya. `build(true)` dipakai hanya oleh ledakan.
