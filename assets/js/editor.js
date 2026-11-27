@@ -7,7 +7,16 @@ const dseg = (px, py, x1, y1, x2, y2) => {
   return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
 };
 
+// Garis-garis badan transistor / MOSFET (koordinat lokal dalam piksel, sebelum diputar) untuk deteksi klik
+const HIT3 = [[0, 0, 30, 0], [30, -16, 30, 16], [30, -9, 72, -48], [30, 9, 72, 48]];
+
 const hit = (px, py) => S.comps.find(c => {
+  if (is3(c)) {
+    return HIT3.some(([a, b, e, f]) => {
+      const p = lw(c, a, b), q = lw(c, e, f);
+      return dseg(px, py, p[0], p[1], q[0], q[1]) < 11;
+    });
+  }
   const [a, b] = term(c);
   return dseg(px, py, a[0] * G, a[1] * G, b[0] * G, b[1] * G) < (c.t == 'G' ? 16 : 12);
 });
