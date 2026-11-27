@@ -6,7 +6,7 @@ Simulator elektronik berbasis web: HTML + CSS + JavaScript statis (tanpa depende
 ```
 index.html            kerangka halaman (markup saja)
 assets/css/style.css  seluruh gaya tampilan
-assets/js/core.js     data komponen, state, util, rute kabel, solver MNA, model panas dan kerusakan
+assets/js/core.js     data komponen, state, util, rute kabel, solver MNA, model transistor, panas dan kerusakan
 assets/js/scope.js    osiloskop digital (akuisisi, pemicu, gambar layar)
 assets/js/editor.js   interaksi kanvas, undo/redo, simpan/muat, keyboard
 assets/js/app.js      toolbar, Pick Parts, Inspektor, gambar kanvas, efek ledakan, loop, boot
@@ -14,17 +14,19 @@ assets/js/app.js      toolbar, Pick Parts, Inspektor, gambar kanvas, efek ledaka
 Urutan pemuatan di `index.html` wajib: `core.js`, `scope.js`, `editor.js`, `app.js` (file-file ini berbagi variabel global). Semua simulasi tetap berjalan di browser pengunjung; server hanya menyajikan file statis.
 
 ## Fitur
-- Komponen: baterai, sumber AC sinus, resistor, kapasitor, induktor, LED (4 warna), dioda (1N4148, 1N4007, 1N5819, BAT54), saklar, GND.
-- **Panas dan ledakan**: tiap komponen punya suhu yang naik saat menyerap daya (indikator suhu kecil ada di panel Inspektor, tepat di bawah pengaturan nilai komponen yang dipilih). Rangkaian yang salah membuat komponen panas, lalu **meledak** (kilatan, percikan, asap) dan menjadi putus sampai rangkaian diperbaiki dan **Reset Simulasi** ditekan. Contoh kesalahan: korsleting baterai (kutub + langsung ke −), LED tanpa resistor, resistor berdaya kecil di tegangan besar, Elco/Tantalum terbalik, kapasitor melewati tegangan kerjanya. LED atau dioda yang dipasang terbalik tidak meledak: arusnya nyaris nol, jadi hanya tidak menyala.
+- Komponen: baterai, sumber AC sinus, resistor, kapasitor, induktor, LED (4 warna), dioda (1N4148, 1N4007, 1N5819, BAT54), saklar, GND, **transistor bipolar NPN dan PNP**, dan **MOSFET N-channel dan P-channel**.
+- **Transistor bipolar** (model Ebers-Moll, hFE dipilih atau diketik, bawaan 100): pin 1 = Basis, pin 2 = Kolektor, pin 3 = Emitor. Bekerja sebagai saklar (jenuh) maupun penguat. Inspektor menampilkan Vce, Ic, Vbe, dan Ib.
+- **MOSFET** (model hukum kuadrat level 1, k = 0,2 A/V², threshold Vth dipilih atau diketik, bawaan 2 V): pin 1 = Gate, pin 2 = Drain, pin 3 = Source. Inspektor menampilkan Vds, Id, dan Vgs.
+- **Panas dan ledakan**: tiap komponen punya suhu yang naik saat menyerap daya (indikator suhu kecil ada di panel Inspektor, tepat di bawah pengaturan nilai komponen yang dipilih). Rangkaian yang salah membuat komponen panas, lalu **meledak** (kilatan, percikan, asap) dan menjadi putus sampai rangkaian diperbaiki dan **Reset Simulasi** ditekan. Contoh kesalahan: korsleting baterai (kutub + langsung ke −), LED tanpa resistor, resistor berdaya kecil di tegangan besar, Elco/Tantalum terbalik, kapasitor melewati tegangan kerjanya, transistor langsung ke baterai tanpa beban, tegangan gate MOSFET lebih dari 20 V. LED atau dioda yang dipasang terbalik tidak meledak: arusnya nyaris nol, jadi hanya tidak menyala.
 - **Tipe kapasitor**: Elco (elektrolit), Keramik, Tantalum, dan Film/Mylar, dipilih lewat selector di panel Inspektor. Kapasitansi diketik manual (bawaan 10 µF). **Elco dan Tantalum berkutub** (pin 1 = +): bila dipasang terbalik, tegangannya terjepit sekitar −1 V, arus mengalir, dan muncul peringatan. Keramik dan Film tidak berkutub.
-- **Nama pin**: tekan sebuah pin untuk melihat namanya (+ / −, Anoda / Katoda, Kaki 1 / 2, dan seterusnya) sesuai komponen aslinya.
+- **Nama pin**: tekan sebuah pin untuk melihat namanya (+ / −, Anoda / Katoda, Basis / Kolektor / Emitor, Gate / Drain / Source, dan seterusnya) sesuai komponen aslinya.
 - **Pick parts**: menu pemilih komponen dengan pencarian dan kategori (Daya, Pasif, Semikonduktor, Kontrol), plus daftar komponen yang terakhir dipakai.
-- **Tampilan Gambar / Skema**: mode Gambar menampilkan komponen berbentuk fisik (resistor dengan gelang warna sesuai nilai, LED yang menyala, dioda, baterai, kapasitor sesuai tipe, saklar); mode Skema menampilkan simbol diagram sirkuit.
+- **Tampilan Gambar / Skema**: mode Gambar menampilkan komponen berbentuk fisik (resistor dengan gelang warna sesuai nilai, LED yang menyala, dioda, baterai, kapasitor sesuai tipe, saklar, transistor bentuk TO-92, MOSFET bentuk TO-220); mode Skema menampilkan simbol diagram sirkuit.
 - Nilai komponen lewat selector preset atau ketik bebas (akhiran SI: p, n, u, m, k, M, G).
 - Editor: seret komponen, kabel (termasuk sambungan T), putar, hapus, undo (Ctrl/Cmd+Z), zoom dan geser tampilan.
 - Pembacaan tegangan, arus, dan daya per komponen.
 - **Osiloskop digital** seperti aslinya: layar 10 x 8 div, **Volt/div** (10 mV sampai 50 V) dan **Time/div** (100 µs sampai 500 ms), pemicu (mode Auto / Normal / Single, tepi naik atau turun, level), **Posisi Y**, tombol Run/Stop, dan **Autoset**. Sinyal berulang tampil diam karena disinkronkan ke pemicu. Hasil ukur: Vpp, Max, Min, dan frekuensi.
-- Contoh rangkaian siap pakai, simpan/muat (localStorage), tema terang/gelap.
+- Contoh rangkaian siap pakai (LED, RC, penyearah, saklar transistor NPN, saklar MOSFET N), simpan/muat (localStorage), tema terang/gelap.
 
 ## Batas komponen (model panas)
 Pada daya nominal, suhu naik 60 °C di atas suhu ruang (25 °C); pemanasan punya konstanta waktu sekitar 1,5 detik. Komponen meledak saat suhunya mencapai batas.
@@ -37,8 +39,10 @@ Pada daya nominal, suhu naik 60 °C di atas suhu ruang (25 °C); pemanasan punya
 | Dioda | 1 W | 150 °C | |
 | Kapasitor | 0,25 W | 105 °C | polaritas terbalik (Elco/Tantalum) dan tegangan melebihi batas (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V) memanaskan cepat |
 | Baterai / Sumber AC | 2 W (rugi hambatan dalam 1 Ω × I²) | 100 °C | arus besar atau korsleting: sekitar 1,6 A saja sudah cukup lama-lama meledak |
+| Transistor bipolar | 0,3 W (Vce × Ic + Vbe × Ib) | 150 °C | |
+| MOSFET | 0,5 W (Vds × Id) | 150 °C | tegangan gate di atas 20 V menembus isolator gate dan memanaskan cepat |
 
-Nilai ini perkiraan untuk tujuan belajar, bukan data lembar data komponen tertentu. Model tembus balik (reverse breakdown) LED dan dioda belum ada.
+Nilai ini perkiraan untuk tujuan belajar, bukan data lembar data komponen tertentu. Model tembus balik (reverse breakdown) LED dan dioda, efek Early pada BJT, dan dioda bodi MOSFET belum ada.
 
 ## Menjalankan
 Buka `index.html` di browser (folder `assets/` harus ikut berada di sebelahnya), atau lewat GitHub Pages / InfinityFree (lihat di bawah).
@@ -62,7 +66,7 @@ Pengaturan satu kali:
 Catatan cache: link CSS dan JS di `index.html` memakai `?v=...`. Ubah nilai itu setiap kali file di `assets/` berubah agar browser pengunjung mengambil versi baru.
 
 ## Teknis
-Modified Nodal Analysis, simulasi transien backward Euler, Newton-Raphson untuk dioda/LED. Detail riwayat dan keterbatasan ada di `LOG.md`.
+Modified Nodal Analysis, simulasi transien backward Euler, Newton-Raphson untuk dioda, LED, BJT, dan MOSFET. Detail riwayat dan keterbatasan ada di `LOG.md`.
 
 ## Aturan repo
 Setiap review atau perubahan **wajib** dicatat di bagian paling atas `LOG.md`.
