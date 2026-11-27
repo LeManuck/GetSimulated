@@ -8,6 +8,12 @@ const DPR = Math.min(devicePixelRatio || 1, 2);
 const V = { z: 1, x: 0, y: 0 };
 const D = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
+// Komponen berkaki tiga. Q = transistor NPN, U = PNP (BJT); M = MOSFET N-channel, N = P-channel (nilai = polaritas).
+// Urutan pin: 0 = Basis / Gate, 1 = Kolektor / Drain, 2 = Emitor / Source.
+const BJT = { Q: 1, U: -1 };
+const FET = { M: 1, N: -1 };
+const is3 = c => c.t in BJT || c.t in FET;
+
 const T = {
   V: { n: 'Baterai', u: 'V', v: 9, p: [1.5, 3, 3.3, 5, 9, 12] },
   A: { n: 'Sumber AC', u: 'V', v: 5, p: [1, 3, 5, 9, 12], f: 50, fp: [1, 10, 50, 60, 100, 500, 1000] },
@@ -17,7 +23,11 @@ const T = {
   D: { n: 'LED', u: 'V', v: 1.8, p: [1.8, 2, 2.1, 3], nm: ['Merah', 'Kuning', 'Hijau', 'Biru'] },
   J: { n: 'Dioda', u: 'V', v: .72, p: [.72, .68, .3, .4], nm: ['1N4148', '1N4007', '1N5819', 'BAT54'] },
   S: { n: 'Saklar' },
-  G: { n: 'GND' }
+  G: { n: 'GND' },
+  Q: { n: 'Transistor NPN', u: '', v: 100, p: [50, 100, 200, 300] },
+  U: { n: 'Transistor PNP', u: '', v: 100, p: [50, 100, 200, 300] },
+  M: { n: 'MOSFET N', u: 'V', v: 2, p: [1, 2, 3, 4] },
+  N: { n: 'MOSFET P', u: 'V', v: 2, p: [1, 2, 3, 4] }
 };
 
 // Tipe kapasitor (disimpan di komponen sebagai c.ct). pol = berkutub: pin 1 = (+), pin 2 = (−).
@@ -32,7 +42,7 @@ const CAPT = {
 const capKey = c => CAPT[c.ct] ? c.ct : 'elco';
 const ctype = c => CAPT[capKey(c)];
 
-// Nama pin per komponen (indeks 0 = pin 1, 1 = pin 2) dan kutubnya: +1 positif, -1 negatif, 0 netral
+// Nama pin per komponen (indeks 0 = pin 1, 1 = pin 2, 2 = pin 3) dan kutubnya: +1 positif, -1 negatif, 0 netral
 const PIN = {
   V: [['− Negatif', -1], ['+ Positif', 1]],
   A: [['Terminal −', -1], ['Terminal +', 1]],
@@ -41,14 +51,19 @@ const PIN = {
   S: [['Kontak 1', 0], ['Kontak 2', 0]],
   D: [['Anoda (+)', 1], ['Katoda (−)', -1]],
   J: [['Anoda (+)', 1], ['Katoda (−)', -1]],
-  G: [['GND', 0], ['GND', 0]]
+  G: [['GND', 0], ['GND', 0]],
+  Q: [['Basis (B)', 0], ['Kolektor (C)', 1], ['Emitor (E)', -1]],
+  U: [['Basis (B)', 0], ['Kolektor (C)', -1], ['Emitor (E)', 1]],
+  M: [['Gate (G)', 0], ['Drain (D)', 1], ['Source (S)', -1]],
+  N: [['Gate (G)', 0], ['Drain (D)', -1], ['Source (S)', 1]]
 };
 const pinInfo = (c, t) => c.t == 'C'
   ? (ctype(c).pol ? [['+ Positif', 1], ['− Negatif', -1]] : [['Kaki 1', 0], ['Kaki 2', 0]])[t]
   : PIN[c.t][t];
 
 const TC = {
-  V: '#ef4444', A: '#ef4444', R: '#f59e0b', C: '#3b82f6', L: '#8b5cf6', D: '#10b981', J: '#f97316', S: '#64748b', G: '#64748b'
+  V: '#ef4444', A: '#ef4444', R: '#f59e0b', C: '#3b82f6', L: '#8b5cf6', D: '#10b981', J: '#f97316', S: '#64748b', G: '#64748b',
+  Q: '#0ea5e9', U: '#06b6d4', M: '#a855f7', N: '#d946ef'
 };
 
 const IC = {
@@ -64,7 +79,11 @@ const IC = {
   D: 'M2 12h6M8 6v12l8-6zM16 6v12M16 12h6M18 4l3-2M20 8l3-2',
   J: 'M2 12h6M8 6v12l8-6zM16 6v12M16 12h6',
   S: 'M2 12h6M16 12h6M8 12l8-6',
-  G: 'M12 4v8M5 12h14M8 16h8M10 20h4'
+  G: 'M12 4v8M5 12h14M8 16h8M10 20h4',
+  Q: 'M2 12h7M9 6v12M9 10l8-5M9 14l8 5M12.1 17.8l3.4.2-1.7-3',
+  U: 'M2 12h7M9 6v12M9 10l8-5M9 14l8 5M12.7 18.2L11 15.3l3.4.2',
+  M: 'M2 12h5M7 6v12M10 6v3M10 10.5v3M10 15v3M10 7.5h10M10 16.5h10M10 12h5M12.5 10.8L10 12l2.5 1.2',
+  N: 'M2 12h5M7 6v12M10 6v3M10 10.5v3M10 15v3M10 7.5h10M10 16.5h10M10 12h5M12.5 10.8L15 12l-2.5 1.2'
 };
 
 const ico = (k, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${TC[k] || 'currentColor'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg>`;
@@ -73,7 +92,11 @@ const ico = (k, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="
 const EX = [
   ['LED + resistor', [['V', 4, 9, 3], ['R', 4, 6, 0], ['D', 7, 6, 1], ['G', 4, 9, 0]], [[2, 1, 3, 0]]],
   ['Pengisian kapasitor (RC)', [['V', 4, 9, 3, 9], ['S', 4, 6, 0], ['R', 7, 6, 0, 1000], ['C', 10, 6, 1, 1e-4], ['G', 4, 9, 0]], [[3, 1, 4, 0]]],
-  ['Penyearah setengah gelombang', [['A', 4, 9, 3, 5], ['J', 4, 6, 0], ['R', 7, 6, 1, 1000], ['C', 10, 6, 1, 1e-5], ['G', 4, 9, 0]], [[2, 0, 3, 0], [3, 1, 2, 1], [2, 1, 4, 0]]]
+  ['Penyearah setengah gelombang', [['A', 4, 9, 3, 5], ['J', 4, 6, 0], ['R', 7, 6, 1, 1000], ['C', 10, 6, 1, 1e-5], ['G', 4, 9, 0]], [[2, 0, 3, 0], [3, 1, 2, 1], [2, 1, 4, 0]]],
+  // Saklar menyalakan LED lewat transistor NPN: arus basis kecil (sekitar 0,8 mA) mengendalikan arus LED (sekitar 21 mA)
+  ['Transistor NPN sebagai saklar', [['V', 4, 12, 3, 9], ['G', 4, 12, 0], ['S', 4, 9, 0], ['R', 7, 9, 0, 1e4], ['Q', 10, 9, 0], ['D', 13, 4, 1], ['R', 13, 1, 1, 330]], [[0, 1, 6, 0], [4, 2, 1, 0]]],
+  // Saklar memberi tegangan ke gate MOSFET N-channel; resistor 100 kΩ menarik gate ke GND saat saklar dibuka
+  ['MOSFET N sebagai saklar', [['V', 4, 12, 3, 9], ['G', 4, 12, 0], ['S', 4, 9, 0], ['M', 7, 9, 0, 2], ['D', 10, 4, 1], ['R', 10, 1, 1, 330], ['R', 7, 9, 1, 1e5]], [[0, 1, 5, 0], [3, 2, 1, 0], [6, 1, 1, 0]]]
 ];
 
 const S = {
@@ -120,11 +143,24 @@ function parse(s) {
   return +m[1] * ({ p: 1e-12, n: 1e-9, u: 1e-6, 'µ': 1e-6, m: 1e-3, k: 1e3, K: 1e3, M: 1e6, G: 1e9 }[m[2]] || 1);
 }
 
+// Titik pin dalam koordinat grid. Komponen berkaki dua: pin 2 berjarak 3 kotak searah putaran.
+// Komponen berkaki tiga (lokal, sebelum diputar): pin 0 di (0,0), pin 1 di (3,-2), pin 2 di (3,2).
 const term = c => {
   const a = [c.x, c.y], d = D[c.r];
+  if (is3(c)) {
+    return [a,
+      [c.x + 3 * d[0] + 2 * d[1], c.y + 3 * d[1] - 2 * d[0]],
+      [c.x + 3 * d[0] - 2 * d[1], c.y + 3 * d[1] + 2 * d[0]]];
+  }
   return [a, c.t == 'G' ? a : [c.x + d[0] * 3, c.y + d[1] * 3]];
 };
 const K = p => p[0] + ',' + p[1];
+
+// Titik lokal komponen (piksel, sebelum diputar) menjadi koordinat piksel dunia
+const lw = (c, x, y) => {
+  const d = D[c.r];
+  return [c.x * G + x * d[0] - y * d[1], c.y * G + x * d[1] + y * d[0]];
+};
 
 function onSeg(p, a, b) {
   return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) == 0 &&
@@ -141,6 +177,9 @@ const lp = e => {
 };
 const linksOf = id => Object.keys(S.links).filter(k => S.links[k].a.c == id || S.links[k].b.c == id).map(Number);
 
+// Kotak (lokal, dalam satuan grid) yang ditutup badan komponen berkaki tiga agar kabel tidak melewatinya
+const B3 = [[1, 0], [2, 0], [1, -1], [2, -1], [1, 1], [2, 1], [3, -1], [3, 0], [3, 1]];
+
 // Dijkstra di grid: ortogonal, menghindari badan komponen, kaki komponen lain, dan ujung kabel lain
 function route(a, b, ex) {
   const ka = K(a), kb = K(b);
@@ -149,6 +188,7 @@ function route(a, b, ex) {
   for (const c of S.comps) {
     const d = D[c.r];
     if (c.t == 'G') bk(c.x - d[1], c.y + d[0]);
+    else if (is3(c)) for (const [u, v] of B3) bk(c.x + u * d[0] - v * d[1], c.y + u * d[1] + v * d[0]);
     else { bk(c.x + d[0], c.y + d[1]); bk(c.x + 2 * d[0], c.y + 2 * d[1]); }
     for (const p of term(c)) {
       xs.push(p[0]); ys.push(p[1]);
@@ -306,7 +346,10 @@ function build(keep) {
     }
   }
   if (!keep) {
-    S.comps.forEach(c => { c.v = 0; c.i = 0; c.vd = 0; c.T = TAMB; c.P = 0; c.pa = c.pn = 0; c.dead = false; c.why = ''; c.smk = 0; });
+    S.comps.forEach(c => {
+      c.v = 0; c.i = 0; c.vd = 0; c.T = TAMB; c.P = 0; c.pa = c.pn = 0; c.dead = false; c.why = ''; c.smk = 0;
+      c.q1 = c.q2 = 0; c.vbe = c.ib = c.vgs = 0; // keadaan sambungan transistor
+    });
     S.t = 0; scopeReset();
   }
   const gc = S.comps.find(c => c.t == 'G');
@@ -322,7 +365,8 @@ function build(keep) {
     n,
     // komponen rusak (meledak) diperlakukan sebagai rangkaian terbuka
     els: S.comps.filter(c => c.t != 'G' && !c.dead).map(c => {
-      const [a, b] = term(c), e = { c, a: nd(a), b: nd(b) };
+      const tp = term(c), e = { c, a: nd(tp[0]), b: nd(tp[1]) };
+      if (tp.length > 2) e.e = nd(tp[2]); // pin 3: Emitor / Source
       if (c.t == 'V' || c.t == 'A') e.k = m++;
       return e;
     })
@@ -354,6 +398,46 @@ function gauss(A, N) {
 const NV = 2 * .02585, isat = c => .01 / Math.exp(c.val / NV);
 const ISR = .01 / Math.exp(1 / NV); // dioda terbalik kapasitor berkutub: sekitar 1 V pada 10 mA
 
+// ---------- Model transistor ----------
+// BJT: Ebers-Moll (Is = 1e-14 A, Vt = 25,85 mV, hFE = nilai komponen, beta balik = 2). Keadaan sambungan (sudah dikali
+// polaritas): c.q1 = Vbe, c.q2 = Vbc. Eksponen dilinierkan di atas 40 agar tidak meluap.
+// MOSFET: level 1 (hukum kuadrat) dengan modulasi panjang kanal 0,02 dan k = 0,2 A/V²; simetris (drain dan source
+// bertukar bila tegangan terbalik). Keadaan: c.q1 = Vg - Vs, c.q2 = Vd - Vs (tegangan simpul asli).
+const QT = .02585, QIS = 1e-14, QBR = 2, FK = .2, FLAM = .02;
+const E40 = Math.exp(40);
+const eexp = x => x < 40 ? Math.exp(x) : E40 * (1 + x - 40);
+const deexp = x => x < 40 ? Math.exp(x) : E40;
+
+function bjtEval(c) {
+  const e1 = eexp(c.q1 / QT), e2 = eexp(c.q2 / QT);
+  const IF = QIS * (e1 - 1), IR = QIS * (e2 - 1);
+  return {
+    ic: IF - IR * (1 + 1 / QBR),
+    ib: IF / c.val + IR / QBR,
+    gF: QIS / QT * deexp(c.q1 / QT),
+    gR: QIS / QT * deexp(c.q2 / QT)
+  };
+}
+
+function fetEval(c) {
+  const s = FET[c.t], vgs0 = s * c.q1, vds0 = s * c.q2, sw = vds0 < 0;
+  const vgs = sw ? s * (c.q1 - c.q2) : vgs0, vds = sw ? -vds0 : vds0, vov = vgs - c.val;
+  let id = 0, gm = 0, gds = 0;
+  if (vov > 0) {
+    const m = 1 + FLAM * vds;
+    if (vds < vov) {
+      id = FK * (2 * vov * vds - vds * vds) * m;
+      gm = 2 * FK * vds * m;
+      gds = FK * ((2 * vov - 2 * vds) * m + (2 * vov * vds - vds * vds) * FLAM);
+    } else {
+      id = FK * vov * vov * m;
+      gm = 2 * FK * vov * m;
+      gds = FK * vov * vov * FLAM;
+    }
+  }
+  return { s, sw, id: id + 1e-9 * vds, gm, gds: gds + 1e-9 }; // 1e-9: kebocoran kecil agar solver stabil
+}
+
 function step() {
   const { n, els, N } = net, dt = S.dt;
   let x;
@@ -382,6 +466,39 @@ function step() {
       else if (c.t == 'D' || c.t == 'J') {
         const Is = isat(c), ex = Math.exp(c.vd / NV), gd = Is * ex / NV + 1e-12;
         g(a, b, gd); cs(a, b, Is * (ex - 1) - gd * c.vd);
+      } else if (c.t in BJT) {
+        // Pin: a = Basis, b = Kolektor, e.e = Emitor. Arus terminal dilinierkan terhadap Vbe dan Vbc (companion model).
+        const s = BJT[c.t], ev = bjtEval(c), ns = [a, b, e.e];
+        const aB = s * ev.gF / c.val, bB = s * ev.gR / QBR, iB = s * ev.ib;
+        const aC = s * ev.gF, bC = -s * ev.gR * (1 + 1 / QBR), iC = s * ev.ic;
+        const rows = [[ns[0], aB, bB, iB], [ns[1], aC, bC, iC], [ns[2], -(aB + aC), -(bB + bC), -(iB + iC)]];
+        for (const [nk, ak, bk, i0] of rows) {
+          if (nk < 0) continue;
+          if (ns[0] >= 0) A[nk][ns[0]] += s * (ak + bk);
+          if (ns[2] >= 0) A[nk][ns[2]] -= s * ak;
+          if (ns[1] >= 0) A[nk][ns[1]] -= s * bk;
+          A[nk][N] -= i0 - ak * c.q1 - bk * c.q2;
+        }
+      } else if (c.t in FET) {
+        // Pin: a = Gate, b = Drain, e.e = Source. Gate tidak menarik arus.
+        const ev = fetEval(c), ns = [a, b, e.e], v1 = c.q1, v2 = c.q2, s = ev.s;
+        let rowD, rowS, ieD, ieS;
+        if (!ev.sw) {
+          rowD = [ev.gm, ev.gds, -(ev.gm + ev.gds)];
+          ieD = s * ev.id - ev.gm * v1 - ev.gds * v2;
+          rowS = rowD.map(q => -q);
+          ieS = -ieD;
+        } else {
+          rowS = [ev.gm, -(ev.gm + ev.gds), ev.gds];
+          ieS = s * ev.id - ev.gm * (v1 - v2) + ev.gds * v2;
+          rowD = rowS.map(q => -q);
+          ieD = -ieS;
+        }
+        for (const [nk, co, ie] of [[ns[1], rowD, ieD], [ns[2], rowS, ieS]]) {
+          if (nk < 0) continue;
+          for (let j = 0; j < 3; j++) if (ns[j] >= 0) A[nk][ns[j]] += co[j];
+          A[nk][N] -= ie;
+        }
       } else {
         const k = e.k;
         if (b >= 0) { A[b][k] -= 1; A[k][b] += 1; }
@@ -405,6 +522,20 @@ function step() {
           if (Math.abs(v - c.vd) > 1e-6) conv = false;
           c.vd += Math.max(-.5, Math.min(.1, v - c.vd));
         }
+      } else if (e.c.t in BJT) {
+        const c = e.c, s = BJT[c.t];
+        const xb = e.a >= 0 ? x[e.a] : 0, xc = e.b >= 0 ? x[e.b] : 0, xe = e.e >= 0 ? x[e.e] : 0;
+        const n1 = s * (xb - xe), n2 = s * (xb - xc);
+        if (Math.abs(n1 - c.q1) > 1e-6 || Math.abs(n2 - c.q2) > 1e-6) conv = false;
+        c.q1 += Math.max(-.5, Math.min(.1, n1 - c.q1));
+        c.q2 += Math.max(-.5, Math.min(.1, n2 - c.q2));
+      } else if (e.c.t in FET) {
+        const c = e.c;
+        const xg = e.a >= 0 ? x[e.a] : 0, xd = e.b >= 0 ? x[e.b] : 0, xs = e.e >= 0 ? x[e.e] : 0;
+        const n1 = xg - xs, n2 = xd - xs;
+        if (Math.abs(n1 - c.q1) > 1e-6 || Math.abs(n2 - c.q2) > 1e-6) conv = false;
+        c.q1 += Math.max(-3, Math.min(3, n1 - c.q1));
+        c.q2 += Math.max(-3, Math.min(3, n2 - c.q2));
       }
     }
     if (conv) break;
@@ -421,6 +552,20 @@ function step() {
     }
     else if (c.t == 'L') c.i = c.i + dt / c.val * v;
     else if (c.t == 'D' || c.t == 'J') c.i = isat(c) * (Math.exp(c.vd / NV) - 1);
+    else if (c.t in BJT) {
+      // c.v = Vce, c.i = Ic (masuk ke kolektor), c.vbe dan c.ib untuk tampilan dan panas
+      const ev = bjtEval(c), s = BJT[c.t];
+      const xb = e.a >= 0 ? x[e.a] : 0, xc = e.b >= 0 ? x[e.b] : 0, xe = e.e >= 0 ? x[e.e] : 0;
+      c.i = s * ev.ic; c.ib = s * ev.ib; c.v = xc - xe; c.vbe = xb - xe;
+      continue;
+    }
+    else if (c.t in FET) {
+      // c.v = Vds, c.i = Id (masuk ke drain), c.vgs = Vgs
+      const ev = fetEval(c);
+      const xg = e.a >= 0 ? x[e.a] : 0, xd = e.b >= 0 ? x[e.b] : 0, xs = e.e >= 0 ? x[e.e] : 0;
+      c.i = ev.sw ? -ev.s * ev.id : ev.s * ev.id; c.v = xd - xs; c.vgs = xg - xs;
+      continue;
+    }
     else { c.i = x[e.k]; c.v = -v; continue; }
     c.v = v;
   }
@@ -440,9 +585,14 @@ const TH = {
   J: { Pr: 1, Tmax: 150 },
   C: { Pr: .25, Tmax: 105 },
   V: { Pr: 2, Tmax: 100 },
-  A: { Pr: 2, Tmax: 100 }
+  A: { Pr: 2, Tmax: 100 },
+  Q: { Pr: .3, Tmax: 150 },
+  U: { Pr: .3, Tmax: 150 },
+  M: { Pr: .5, Tmax: 150 },
+  N: { Pr: .5, Tmax: 150 }
 };
 const CAPV = { elco: 16, cer: 50, tan: 10, film: 63 }; // tegangan kerja maksimum per tipe kapasitor (V)
+const VGMAX = 20; // tegangan gate-source maksimum MOSFET (V)
 
 // Daya pemanasan efektif (W).
 // Baterai / Sumber AC: rugi hambatan dalam 1 Ω (I²), BUKAN tegangan terminal x arus. Saat dikorsleting tegangan terminal
@@ -452,10 +602,17 @@ const CAPV = { elco: 16, cer: 50, tan: 10, film: 63 }; // tegangan kerja maksimu
 // LED dan dioda dipasang terbalik tidak dibakar: arus balik nyaris nol, jadi hanya tidak menyala (seperti aslinya pada
 // tegangan rendah). Model tembus balik (breakdown) belum ada.
 // Kapasitor: polaritas terbalik dan tegangan melebihi batas memanaskan dengan cepat.
+// Transistor bipolar: Vce x Ic + Vbe x Ib. MOSFET: Vds x Id, dan tegangan gate melebihi 20 V menembus isolator gate.
 function pwr(c) {
   const v = c.v, i = c.i, p = Math.abs(v * i);
   if (c.t == 'V' || c.t == 'A') return i * i;
   if (c.t == 'L') return i * i * .5;
+  if (c.t in BJT) return p + Math.abs(c.vbe * c.ib);
+  if (c.t in FET) {
+    let q = p;
+    if (Math.abs(c.vgs) > VGMAX) q += TH[c.t].Pr * 4 * (c.vgs / VGMAX) ** 2;
+    return q;
+  }
   if (c.t == 'C') {
     let q = p;
     if (ctype(c).pol && v < -.7) q += 20 * Math.abs(i);
@@ -484,6 +641,7 @@ function whyOf(c, P) {
     if (ctype(c).pol && c.v < -.7) return 'dipasang terbalik (polaritas salah)';
     return 'terlalu panas';
   }
+  if (c.t in FET && Math.abs(c.vgs) > VGMAX) return 'tegangan gate ' + fmt(Math.abs(c.vgs), 'V') + ' melebihi batas ' + VGMAX + 'V';
   if (c.t == 'V' || c.t == 'A') return 'arus ' + fmt(i, 'A') + ' terlalu besar (korsleting?)';
   if (c.t == 'D' || c.t == 'J' || c.t == 'L') return 'arus ' + fmt(i, 'A') + ' terlalu besar';
   return 'daya ' + fmt(P, 'W') + ' melebihi rating ' + fmt(TH[c.t].Pr, 'W');
