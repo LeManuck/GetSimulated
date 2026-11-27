@@ -89,14 +89,16 @@ const IC = {
 const ico = (k, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${TC[k] || 'currentColor'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg>`;
 
 // Contoh rangkaian: [nama, komponen, kabel]. Kabel = [indeksKomp, pin, indeksKomp, pin] (pin 0 = kaki a, 1 = kaki b)
+// Komponen berkaki tiga: titik (x, y) adalah kaki tengah (Basis/Gate); kaki Kolektor/Drain satu kotak di atasnya dan
+// Emitor/Source satu kotak di bawahnya (untuk putaran 0), badan di sebelah kanan.
 const EX = [
   ['LED + resistor', [['V', 4, 9, 3], ['R', 4, 6, 0], ['D', 7, 6, 1], ['G', 4, 9, 0]], [[2, 1, 3, 0]]],
   ['Pengisian kapasitor (RC)', [['V', 4, 9, 3, 9], ['S', 4, 6, 0], ['R', 7, 6, 0, 1000], ['C', 10, 6, 1, 1e-4], ['G', 4, 9, 0]], [[3, 1, 4, 0]]],
   ['Penyearah setengah gelombang', [['A', 4, 9, 3, 5], ['J', 4, 6, 0], ['R', 7, 6, 1, 1000], ['C', 10, 6, 1, 1e-5], ['G', 4, 9, 0]], [[2, 0, 3, 0], [3, 1, 2, 1], [2, 1, 4, 0]]],
   // Saklar menyalakan LED lewat transistor NPN: arus basis kecil (sekitar 0,8 mA) mengendalikan arus LED (sekitar 21 mA)
-  ['Transistor NPN sebagai saklar', [['V', 4, 12, 3, 9], ['G', 4, 12, 0], ['S', 4, 9, 0], ['R', 7, 9, 0, 1e4], ['Q', 10, 9, 0], ['D', 13, 4, 1], ['R', 13, 1, 1, 330]], [[0, 1, 6, 0], [4, 2, 1, 0]]],
+  ['Transistor NPN sebagai saklar', [['V', 4, 12, 3, 9], ['G', 4, 12, 0], ['S', 4, 9, 0], ['R', 7, 9, 0, 1e4], ['Q', 10, 9, 0], ['D', 10, 5, 1], ['R', 10, 2, 1, 330]], [[0, 1, 6, 0], [4, 2, 1, 0]]],
   // Saklar memberi tegangan ke gate MOSFET N-channel; resistor 100 kΩ menarik gate ke GND saat saklar dibuka
-  ['MOSFET N sebagai saklar', [['V', 4, 12, 3, 9], ['G', 4, 12, 0], ['S', 4, 9, 0], ['M', 7, 9, 0, 2], ['D', 10, 4, 1], ['R', 10, 1, 1, 330], ['R', 7, 9, 1, 1e5]], [[0, 1, 5, 0], [3, 2, 1, 0], [6, 1, 1, 0]]]
+  ['MOSFET N sebagai saklar', [['V', 1, 12, 3, 9], ['G', 1, 12, 0], ['S', 1, 9, 0], ['M', 7, 9, 0, 2], ['D', 7, 5, 1], ['R', 7, 2, 1, 330], ['R', 4, 9, 1, 1e5]], [[0, 1, 5, 0], [2, 1, 3, 0], [3, 2, 1, 0], [6, 1, 1, 0]]]
 ];
 
 const S = {
@@ -144,14 +146,11 @@ function parse(s) {
 }
 
 // Titik pin dalam koordinat grid. Komponen berkaki dua: pin 2 berjarak 3 kotak searah putaran.
-// Komponen berkaki tiga (lokal, sebelum diputar): pin 0 di (0,0), pin 1 di (3,-2), pin 2 di (3,2).
+// Komponen berkaki tiga (seperti kemasan TO-92 asli): tiga kaki sejajar berderet, pin 0 (Basis/Gate) di tengah titik (x, y),
+// pin 1 (Kolektor/Drain) satu kotak ke satu sisi dan pin 2 (Emitor/Source) satu kotak ke sisi lain; badan ada di depannya.
 const term = c => {
   const a = [c.x, c.y], d = D[c.r];
-  if (is3(c)) {
-    return [a,
-      [c.x + 3 * d[0] + 2 * d[1], c.y + 3 * d[1] - 2 * d[0]],
-      [c.x + 3 * d[0] - 2 * d[1], c.y + 3 * d[1] + 2 * d[0]]];
-  }
+  if (is3(c)) return [a, [c.x + d[1], c.y - d[0]], [c.x - d[1], c.y + d[0]]];
   return [a, c.t == 'G' ? a : [c.x + d[0] * 3, c.y + d[1] * 3]];
 };
 const K = p => p[0] + ',' + p[1];
@@ -161,6 +160,9 @@ const lw = (c, x, y) => {
   const d = D[c.r];
   return [c.x * G + x * d[0] - y * d[1], c.y * G + x * d[1] + y * d[0]];
 };
+
+// Pusat badan komponen dalam piksel dunia (untuk efek ledakan)
+const ctr = c => is3(c) ? lw(c, 58, 0) : [(c.x + D[c.r][0] * 1.5) * G, (c.y + D[c.r][1] * 1.5) * G];
 
 function onSeg(p, a, b) {
   return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) == 0 &&
@@ -177,8 +179,8 @@ const lp = e => {
 };
 const linksOf = id => Object.keys(S.links).filter(k => S.links[k].a.c == id || S.links[k].b.c == id).map(Number);
 
-// Kotak (lokal, dalam satuan grid) yang ditutup badan komponen berkaki tiga agar kabel tidak melewatinya
-const B3 = [[1, 0], [2, 0], [1, -1], [2, -1], [1, 1], [2, 1], [3, -1], [3, 0], [3, 1]];
+// Kotak (lokal, dalam satuan grid) yang ditutup kaki dan badan komponen berkaki tiga agar kabel tidak melewatinya
+const B3 = [[1, -1], [1, 0], [1, 1], [2, -1], [2, 0], [2, 1], [3, -1], [3, 0], [3, 1], [4, -1], [4, 0], [4, 1]];
 
 // Dijkstra di grid: ortogonal, menghindari badan komponen, kaki komponen lain, dan ujung kabel lain
 function route(a, b, ex) {
@@ -670,7 +672,7 @@ function boom(c, why) {
   c.v = c.i = c.vd = 0;
   c.T = TH[c.t].Tmax;
   c.smk = 6;
-  const d = D[c.r], x = (c.x + d[0] * 1.5) * G, y = (c.y + d[1] * 1.5) * G;
+  const [x, y] = ctr(c);
   S.fx.push({ k: 'flash', x, y, life: .4, max: .4 });
   for (let i = 0; i < 36; i++) {
     const a = Math.random() * 6.283, s = 80 + Math.random() * 220, l = .5 + Math.random() * .6;
@@ -700,8 +702,8 @@ function updFx(dt) {
     if (!c.dead || !(c.smk > 0)) continue;
     c.smk -= dt;
     if (Math.random() < dt * 6) {
-      const d = D[c.r], l = 1.4 + Math.random();
-      f.push({ k: 'smoke', x: (c.x + d[0] * 1.5) * G + (Math.random() - .5) * 10, y: (c.y + d[1] * 1.5) * G, vx: (Math.random() - .5) * 10, vy: -18 - Math.random() * 14, life: l, max: l, r: 4 + Math.random() * 4 });
+      const q = ctr(c), l = 1.4 + Math.random();
+      f.push({ k: 'smoke', x: q[0] + (Math.random() - .5) * 10, y: q[1], vx: (Math.random() - .5) * 10, vy: -18 - Math.random() * 14, life: l, max: l, r: 4 + Math.random() * 4 });
     }
   }
 }
