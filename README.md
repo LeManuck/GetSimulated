@@ -15,7 +15,7 @@ Urutan pemuatan di `index.html` wajib: `core.js`, `scope.js`, `editor.js`, `app.
 
 ## Fitur
 - Komponen: baterai, sumber AC sinus, resistor, kapasitor, induktor, LED (4 warna), dioda (1N4148, 1N4007, 1N5819, BAT54), saklar, GND.
-- **Panas dan ledakan**: tiap komponen punya suhu yang naik saat menyerap daya (indikator suhu kecil ada di panel Inspektor, tepat di bawah pengaturan nilai komponen yang dipilih). Rangkaian yang salah membuat komponen panas, lalu **meledak** (kilatan, percikan, asap) dan menjadi putus sampai rangkaian diperbaiki dan **Reset Simulasi** ditekan. Contoh kesalahan: korsleting baterai (kutub + langsung ke −), LED tanpa resistor, resistor berdaya kecil di tegangan besar, Elco/Tantalum terbalik, kapasitor melewati tegangan kerjanya, LED terbalik di tegangan besar.
+- **Panas dan ledakan**: tiap komponen punya suhu yang naik saat menyerap daya (indikator suhu kecil ada di panel Inspektor, tepat di bawah pengaturan nilai komponen yang dipilih). Rangkaian yang salah membuat komponen panas, lalu **meledak** (kilatan, percikan, asap) dan menjadi putus sampai rangkaian diperbaiki dan **Reset Simulasi** ditekan. Contoh kesalahan: korsleting baterai (kutub + langsung ke −), LED tanpa resistor, resistor berdaya kecil di tegangan besar, Elco/Tantalum terbalik, kapasitor melewati tegangan kerjanya. LED atau dioda yang dipasang terbalik tidak meledak: arusnya nyaris nol, jadi hanya tidak menyala.
 - **Tipe kapasitor**: Elco (elektrolit), Keramik, Tantalum, dan Film/Mylar, dipilih lewat selector di panel Inspektor. Kapasitansi diketik manual (bawaan 10 µF). **Elco dan Tantalum berkutub** (pin 1 = +): bila dipasang terbalik, tegangannya terjepit sekitar −1 V, arus mengalir, dan muncul peringatan. Keramik dan Film tidak berkutub.
 - **Nama pin**: tekan sebuah pin untuk melihat namanya (+ / −, Anoda / Katoda, Kaki 1 / 2, dan seterusnya) sesuai komponen aslinya.
 - **Pick parts**: menu pemilih komponen dengan pencarian dan kategori (Daya, Pasif, Semikonduktor, Kontrol), plus daftar komponen yang terakhir dipakai.
@@ -33,12 +33,12 @@ Pada daya nominal, suhu naik 60 °C di atas suhu ruang (25 °C); pemanasan punya
 |---|---|---|---|
 | Resistor | 0,25 W | 170 °C | |
 | Induktor | 0,5 W (rugi kawat 0,5 Ω × I²) | 160 °C | |
-| LED | 0,06 W | 120 °C | tegangan balik > 5 V memanaskan cepat |
+| LED | 0,06 W | 120 °C | meledak karena arus maju berlebih (sekitar 50 mA ke atas); dipasang terbalik hanya tidak menyala |
 | Dioda | 1 W | 150 °C | |
 | Kapasitor | 0,25 W | 105 °C | polaritas terbalik (Elco/Tantalum) dan tegangan melebihi batas (Elco 16 V, Keramik 50 V, Tantalum 10 V, Film 63 V) memanaskan cepat |
 | Baterai / Sumber AC | 2 W (rugi hambatan dalam 1 Ω × I²) | 100 °C | arus besar atau korsleting: sekitar 1,6 A saja sudah cukup lama-lama meledak |
 
-Nilai ini perkiraan untuk tujuan belajar, bukan data lembar data komponen tertentu.
+Nilai ini perkiraan untuk tujuan belajar, bukan data lembar data komponen tertentu. Model tembus balik (reverse breakdown) LED dan dioda belum ada.
 
 ## Menjalankan
 Buka `index.html` di browser (folder `assets/` harus ikut berada di sebelahnya), atau lewat GitHub Pages / InfinityFree (lihat di bawah).
