@@ -65,7 +65,7 @@ const PARTS = [
   ['Q', 'Transistor NPN', 'Semikonduktor', 'transistor bjt npn 2n3904 bc547 saklar penguat amplifier basis kolektor emitor'],
   ['U', 'Transistor PNP', 'Semikonduktor', 'transistor bjt pnp 2n3906 bc557 saklar penguat amplifier basis kolektor emitor'],
   ['M', 'MOSFET N-channel', 'Semikonduktor', 'mosfet fet nmos n-channel 2n7000 irlz44 irf saklar gate drain source'],
-  ['N', 'MOSFET P-channel', 'Semikonduktor', 'mosfet fet pmos p-channel irf9540 saklar gate drain source']
+  ['N', 'MOSFET P-channel', 'Semikonduktor', 'mosfet fet pmos p-channel bs250 irf9540 saklar gate drain source']
 ];
 
 let Q = '', CT = 'Semua';
@@ -312,6 +312,9 @@ function arw(x, y, ux, uy) {
   cx.lineTo(x - ux * 9 - nx * 4.5, y - uy * 9 - ny * 4.5);
 }
 
+// Tulisan di badan kemasan transistor (kode komponen nyata sebagai contoh)
+const CODE3 = { Q: '2N3904', U: '2N3906', M: '2N7000', N: 'BS250' };
+
 function real(c, L, m) {
   const ld = (a, b) => {
     cx.save(); cx.shadowBlur = 0; cx.strokeStyle = '#98a2b3'; cx.lineWidth = 2.5;
@@ -326,12 +329,6 @@ function real(c, L, m) {
     cx.save(); cx.translate(x, y); cx.rotate(-c.r * Math.PI / 2);
     cx.font = `bold ${px}px system-ui`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
     cx.fillStyle = col; cx.fillText(s, 0, 0); cx.restore();
-  };
-  // Tiga kaki logam dari badan ke pin B/G (0,0), C/D (72,-48), E/S (72,48)
-  const legs3 = (bx, cx1, cy1, ex1, ey1) => {
-    cx.save(); cx.shadowBlur = 0; cx.strokeStyle = '#98a2b3'; cx.lineWidth = 2.5;
-    cx.beginPath(); cx.moveTo(0, 0); cx.lineTo(bx, 0); cx.moveTo(cx1, cy1); cx.lineTo(72, -48); cx.moveTo(ex1, ey1); cx.lineTo(72, 48);
-    cx.stroke(); cx.restore();
   };
   const t = c.t;
 
@@ -402,19 +399,16 @@ function real(c, L, m) {
     cx.strokeStyle = '#e8ecf5'; cx.lineWidth = 4; cx.beginPath();
     cx.moveTo(m, 0); cx.lineTo(m + k, -12); cx.stroke();
     cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(m + k, -12, 3, 0, 7); cx.fill();
-  } else if (t == 'Q' || t == 'U') {
-    // Transistor bipolar (seperti TO-92): badan hitam bersisi datar, tiga kaki ke B, C, E
-    legs3(26, 44, -8, 44, 8);
-    rr(24, -17, 24, 34, [14, 5, 5, 14], '#23262d'); cx.shadowBlur = 0;
-    rr(24, -17, 4, 34, [14, 0, 0, 14], 'rgba(255,255,255,.14)');
-    up(t == 'Q' ? 'NPN' : 'PNP', 37, 0, '#e2e8f0', 8);
-  } else if (t == 'M' || t == 'N') {
-    // MOSFET (seperti TO-220): badan hitam dengan pelat logam di sisi atas, tiga kaki ke G, D, S
-    legs3(20, 46, -8, 46, 8);
-    rr(18, -22, 30, 7, 2, '#b6bcc8'); cx.shadowBlur = 0;
-    cx.fillStyle = '#4b5563'; cx.beginPath(); cx.arc(33, -18.5, 2, 0, 7); cx.fill();
-    rr(18, -15, 30, 31, 3, '#23262d');
-    up(t == 'M' ? 'NMOS' : 'PMOS', 33, 1, '#e2e8f0', 8);
+  } else if (t == 'Q' || t == 'U' || t == 'M' || t == 'N') {
+    // Kemasan TO-92 seperti aslinya: tiga kaki logam sejajar berderet (atas = Kolektor/Drain, tengah = Basis/Gate,
+    // bawah = Emitor/Source) masuk ke badan plastik hitam yang sisi ujungnya setengah bulat dan sisi kaki datar.
+    cx.save(); cx.shadowBlur = 0; cx.strokeStyle = '#b6bcc8'; cx.lineWidth = 2.6; cx.lineCap = 'round';
+    cx.beginPath();
+    for (const y of [-24, 0, 24]) { cx.moveTo(0, y); cx.lineTo(36, y); }
+    cx.stroke(); cx.restore();
+    rr(34, -23, 48, 46, [3, 23, 23, 3], '#23262d'); cx.shadowBlur = 0;
+    rr(34, -23, 5, 46, [3, 0, 0, 3], 'rgba(255,255,255,.12)');
+    up(CODE3[t], 58, 0, '#cbd5e1', 8);
   }
   cx.beginPath();
 }
@@ -499,17 +493,20 @@ function draw() {
     cx.translate(c.x * G, c.y * G);
     cx.rotate(c.r * Math.PI / 2);
 
+    // Pusat badan (untuk cahaya panas dan tanda rusak): komponen berkaki tiga punya badan di sebelah kanan kaki
+    const bm = is3(c) ? 58 : m;
+
     // Cahaya oranye di belakang komponen yang mulai panas (makin terang makin dekat batas rusak)
     const th = TH[c.t];
     const hh = th && !c.dead ? Math.min(1, Math.max(0, ((c.T ?? TAMB) - 55) / (th.Tmax - 55))) : 0;
     if (hh > 0) {
       cx.save();
       cx.shadowBlur = 0;
-      const gr = cx.createRadialGradient(m, 0, 4, m, 0, 34);
+      const gr = cx.createRadialGradient(bm, 0, 4, bm, 0, 34);
       gr.addColorStop(0, `rgba(255,90,20,${.55 * hh})`);
       gr.addColorStop(1, 'rgba(255,90,20,0)');
       cx.fillStyle = gr;
-      cx.beginPath(); cx.arc(m, 0, 34, 0, 7); cx.fill();
+      cx.beginPath(); cx.arc(bm, 0, 34, 0, 7); cx.fill();
       cx.restore();
     }
     cx.beginPath();
@@ -569,25 +566,27 @@ function draw() {
       cx.moveTo(2 * G, 0); cx.lineTo(L, 0);
       cx.moveTo(G, 0); cx.lineTo(c.on ? 2 * G : 2 * G - 4, c.on ? 0 : -14);
     } else if (c.t == 'Q' || c.t == 'U') {
-      // Simbol transistor bipolar: panah emitor keluar dari basis (NPN) atau menuju basis (PNP)
-      cx.moveTo(0, 0); cx.lineTo(30, 0);
-      cx.moveTo(30, -16); cx.lineTo(30, 16);
-      cx.moveTo(30, -9); cx.lineTo(72, -48);
-      cx.moveTo(30, 9); cx.lineTo(72, 48);
-      const eux = 42 / 57.31, euy = 39 / 57.31;
-      if (c.t == 'Q') arw(30 + 42 * .66, 9 + 39 * .66, eux, euy);
-      else arw(30 + 42 * .3, 9 + 39 * .3, -eux, -euy);
+      // Simbol transistor bipolar. Kaki fisik berderet (C atas, B tengah, E bawah), jadi simbol standar digambar di
+      // kanan dan kaki C dan E dihubungkan ke pin lewat garis siku. Panah emitor keluar (NPN) atau masuk (PNP).
+      cx.moveTo(0, 0); cx.lineTo(44, 0);
+      cx.moveTo(44, -16); cx.lineTo(44, 16);
+      cx.moveTo(0, -24); cx.lineTo(62, -24); cx.lineTo(44, -8);
+      cx.moveTo(0, 24); cx.lineTo(62, 24); cx.lineTo(44, 8);
+      const eux = 18 / 24.08, euy = 16 / 24.08;
+      if (c.t == 'Q') arw(44 + 18 * .85, 8 + 16 * .85, eux, euy);
+      else arw(44 + 18 * .22, 8 + 16 * .22, -eux, -euy);
     } else if (c.t == 'M' || c.t == 'N') {
-      // Simbol MOSFET mode peningkatan: gate terpisah dari kanal bersegmen; panah substrat menunjukkan jenis kanal
-      cx.moveTo(0, 0); cx.lineTo(20, 0);
-      cx.moveTo(20, -16); cx.lineTo(20, 16);
-      cx.moveTo(28, -16); cx.lineTo(28, -9);
-      cx.moveTo(28, -4); cx.lineTo(28, 4);
-      cx.moveTo(28, 9); cx.lineTo(28, 16);
-      cx.moveTo(28, -13); cx.lineTo(72, -48);
-      cx.moveTo(28, 13); cx.lineTo(72, 48);
-      cx.moveTo(28, 0); cx.lineTo(40, 0);
-      if (c.t == 'M') arw(29, 0, -1, 0); else arw(40, 0, 1, 0);
+      // Simbol MOSFET mode peningkatan: gate terpisah dari kanal bersegmen; panah substrat menunjukkan jenis kanal.
+      // Drain (atas) dan Source (bawah) dihubungkan ke pin lewat garis siku.
+      cx.moveTo(0, 0); cx.lineTo(40, 0);
+      cx.moveTo(40, -16); cx.lineTo(40, 16);
+      cx.moveTo(48, -16); cx.lineTo(48, -9);
+      cx.moveTo(48, -4); cx.lineTo(48, 4);
+      cx.moveTo(48, 9); cx.lineTo(48, 16);
+      cx.moveTo(0, -24); cx.lineTo(62, -24); cx.lineTo(62, -13); cx.lineTo(48, -13);
+      cx.moveTo(0, 24); cx.lineTo(62, 24); cx.lineTo(62, 13); cx.lineTo(48, 13);
+      cx.moveTo(48, 0); cx.lineTo(62, 0); cx.lineTo(62, 13);
+      if (c.t == 'M') arw(50, 0, -1, 0); else arw(61, 0, 1, 0);
     }
     cx.stroke();
     cx.shadowBlur = 0;
@@ -605,12 +604,12 @@ function draw() {
     if (c.dead) {
       cx.save();
       cx.fillStyle = 'rgba(15,15,15,.8)';
-      cx.beginPath(); cx.arc(m, 0, 15, 0, 7); cx.fill();
+      cx.beginPath(); cx.arc(bm, 0, 15, 0, 7); cx.fill();
       cx.strokeStyle = '#f97316';
       cx.lineWidth = 2;
       cx.beginPath();
-      cx.moveTo(m - 7, -7); cx.lineTo(m + 7, 7);
-      cx.moveTo(m + 7, -7); cx.lineTo(m - 7, 7);
+      cx.moveTo(bm - 7, -7); cx.lineTo(bm + 7, 7);
+      cx.moveTo(bm + 7, -7); cx.lineTo(bm - 7, 7);
       cx.stroke();
       cx.restore();
     }
@@ -623,8 +622,8 @@ function draw() {
     const t3 = is3(c);
     let tx, ty, hz;
     if (t3) {
-      // Komponen berkaki tiga: label di kiri-bawah badan (ikut berputar), tidak menabrak kaki C dan E
-      const q = lw(c, -22, 40);
+      // Komponen berkaki tiga: label di atas badan (ikut berputar), jauh dari kaki
+      const q = lw(c, 60, -44);
       tx = q[0]; ty = q[1]; hz = true;
     } else {
       const mx = (c.x + d[0] * 1.5) * G;
