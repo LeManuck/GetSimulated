@@ -448,13 +448,14 @@ const CAPV = { elco: 16, cer: 50, tan: 10, film: 63 }; // tegangan kerja maksimu
 // Baterai / Sumber AC: rugi hambatan dalam 1 Ω (I²), BUKAN tegangan terminal x arus. Saat dikorsleting tegangan terminal
 // ~0 V sehingga v x i = 0 walau arusnya ratusan ampere; hambatan dalam inilah yang memanas. Dipakai hanya untuk panas
 // (perhitungan listriknya tetap memakai hambatan dalam 10 mΩ di solver).
-// Induktor: rugi tembaga (hambatan kawat 0,5 Ω). LED: tegangan balik > 5 V merusak.
+// Induktor: rugi tembaga (hambatan kawat 0,5 Ω).
+// LED dan dioda dipasang terbalik tidak dibakar: arus balik nyaris nol, jadi hanya tidak menyala (seperti aslinya pada
+// tegangan rendah). Model tembus balik (breakdown) belum ada.
 // Kapasitor: polaritas terbalik dan tegangan melebihi batas memanaskan dengan cepat.
 function pwr(c) {
   const v = c.v, i = c.i, p = Math.abs(v * i);
   if (c.t == 'V' || c.t == 'A') return i * i;
   if (c.t == 'L') return i * i * .5;
-  if (c.t == 'D') return p + (v < -5 ? .5 : 0);
   if (c.t == 'C') {
     let q = p;
     if (ctype(c).pol && v < -.7) q += 20 * Math.abs(i);
@@ -483,7 +484,6 @@ function whyOf(c, P) {
     if (ctype(c).pol && c.v < -.7) return 'dipasang terbalik (polaritas salah)';
     return 'terlalu panas';
   }
-  if (c.t == 'D' && c.v < -5) return 'tegangan balik terlalu besar';
   if (c.t == 'V' || c.t == 'A') return 'arus ' + fmt(i, 'A') + ' terlalu besar (korsleting?)';
   if (c.t == 'D' || c.t == 'J' || c.t == 'L') return 'arus ' + fmt(i, 'A') + ' terlalu besar';
   return 'daya ' + fmt(P, 'W') + ' melebihi rating ' + fmt(TH[c.t].Pr, 'W');
