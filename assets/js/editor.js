@@ -7,14 +7,14 @@ const dseg = (px, py, x1, y1, x2, y2) => {
   return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
 };
 
-// Garis-garis badan transistor / MOSFET (koordinat lokal dalam piksel, sebelum diputar) untuk deteksi klik
-const HIT3 = [[0, 0, 30, 0], [30, -16, 30, 16], [30, -9, 72, -48], [30, 9, 72, 48]];
+// Garis-garis kaki dan badan transistor / MOSFET (koordinat lokal dalam piksel, sebelum diputar) untuk deteksi klik
+const HIT3 = [[0, -24, 34, -24], [0, 0, 34, 0], [0, 24, 34, 24], [58, -20, 58, 20], [44, 0, 74, 0]];
 
 const hit = (px, py) => S.comps.find(c => {
   if (is3(c)) {
     return HIT3.some(([a, b, e, f]) => {
       const p = lw(c, a, b), q = lw(c, e, f);
-      return dseg(px, py, p[0], p[1], q[0], q[1]) < 11;
+      return dseg(px, py, p[0], p[1], q[0], q[1]) < 12;
     });
   }
   const [a, b] = term(c);
