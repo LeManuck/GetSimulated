@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-11-27: v1.11.0, Komponen Berkaki Tiga: Transistor Bipolar NPN/PNP dan MOSFET N/P (Claude)
+**Dilakukan** (file: `assets/js/core.js`, `assets/js/editor.js`, `assets/js/app.js`, `index.html`, `README.md`, `LOG.md`; langsung ke `main`; `scope.js` dan `style.css` tidak diubah)
+- **Infrastruktur tiga kaki.** Jenis baru: `Q` = NPN, `U` = PNP (BJT), `M` = MOSFET N, `N` = MOSFET P. Urutan pin: 0 = Basis/Gate, 1 = Kolektor/Drain, 2 = Emitor/Source. `term()` kini mengembalikan tiga titik untuk komponen ini (lokal: pin 0 di (0,0), pin 1 di (3,−2), pin 2 di (3,2), ikut berputar). `build()` menyimpan simpul pin 3 di `e.e`. Rute kabel menutup sembilan kotak badan (`B3`) agar kabel tidak melewati transistor. Deteksi klik memakai empat garis badan (`HIT3` di `editor.js`, dengan `lw()` mengubah titik lokal ke dunia).
+- **Model BJT (Ebers-Moll):** Is = 1e-14 A, Vt = 25,85 mV, beta balik 2, hFE = nilai komponen (preset 50/100/200/300 atau diketik, bawaan 100). Keadaan sambungan `c.q1` (Vbe) dan `c.q2` (Vbc) dikali polaritas, sehingga NPN dan PNP memakai rumus yang sama. Arus terminal dilinierkan (companion model) lalu dimasukkan ke matriks MNA; eksponen dilinierkan di atas 40 agar tidak meluap; Newton membatasi langkah (naik maksimum 0,1 V, turun maksimum 0,5 V per iterasi).
+- **Model MOSFET (level 1, hukum kuadrat):** k = 0,2 A/V², modulasi panjang kanal 0,02, threshold Vth = nilai komponen (preset 1/2/3/4 V atau diketik, bawaan 2 V); daerah cutoff/linear/jenuh kontinu; simetris (drain dan source bertukar bila tegangan terbalik); kebocoran kecil 1 nS agar solver stabil; gate tidak menarik arus. Keadaan `c.q1 = Vg − Vs`, `c.q2 = Vd − Vs`, langkah Newton dibatasi 3 V.
+- **Panas dan ledakan:** `TH` ditambah Q/U (0,3 W, 150 °C) dan M/N (0,5 W, 150 °C). Daya BJT = Vce × Ic + Vbe × Ib; daya MOSFET = Vds × Id, dan |Vgs| di atas 20 V (`VGMAX`) menembus isolator gate (pemanasan cepat, pesan penyebab khusus). Transistor yang langsung ke baterai tanpa beban meledak (disertai baterai lewat I² × 1 Ω).
+- **Tampilan:** mode Gambar menampilkan transistor bentuk TO-92 (badan hitam bersisi datar bertuliskan NPN/PNP) dan MOSFET bentuk TO-220 (badan hitam dengan pelat logam, tulisan NMOS/PMOS); mode Skema menampilkan simbol standar (panah emitor keluar untuk NPN dan masuk untuk PNP, panah substrat untuk jenis kanal). Label di kanvas diletakkan di kiri-bawah badan dan ikut berputar, berisi jenis, hFE atau Vth, serta tegangan dan arus (Vce/Ic atau Vds/Id).
+- **Inspektor:** pilihan preset hFE atau Vth plus input bebas, indikator suhu, dan satu baris tambahan: BJT menampilkan Vce, Ic, Vbe, Ib; MOSFET menampilkan Vds, Id, Vgs. Nama pin (Basis/Kolektor/Emitor, Gate/Drain/Source) tampil saat pin ditekan.
+- **Pick Parts:** empat entri baru (Transistor NPN, Transistor PNP, MOSFET N-channel, MOSFET P-channel) di kategori Semikonduktor, dengan kata kunci pencarian (2n3904, bc547, 2n7000, irf, dan sebagainya).
+- **Contoh rangkaian baru:** "Transistor NPN sebagai saklar" (baterai 9 V, saklar, resistor basis 10 kΩ, NPN, resistor 330 Ω dan LED di kolektor) dan "MOSFET N sebagai saklar" (saklar ke gate, resistor tarik-bawah 100 kΩ, MOSFET N, resistor 330 Ω dan LED di drain). Perhitungan manual: LED sekitar 21 mA, transistor jenuh dengan daya sekitar 3 mW, tidak meledak.
+- Badge v1.11, `?v=` di `index.html` dinaikkan ke `20261128`, bantuan dan Panduan Cepat menyebut komponen baru. `README.md`: fitur, tabel batas, dan daftar contoh diperbarui.
+
+**Pengujian**
+- BELUM diuji sama sekali. Perubahan ini besar (solver, geometri, gambar, input) dan dibuat lewat konektor GitHub tanpa browser dan tanpa Node, jadi `node --check`, uji konvergensi, dan uji tampilan belum dijalankan. Risiko yang paling mungkin: (1) kesalahan sintaks atau nama variabel yang membuat seluruh situs kosong, cek console browser lebih dulu; (2) Newton tidak konvergen untuk rangkaian tertentu (simulasi lambat atau nilai aneh); (3) label atau simbol tidak pas saat komponen diputar; (4) rute kabel melewati badan transistor di susunan padat.
+- Yang dicek manual hanya: rotasi pin (rumus `term()` cocok dengan transformasi kanvas), penempatan pin pada contoh, tanda arus pada penurunan companion model BJT/MOSFET, dan bahwa komponen berkaki dua tidak berubah perilakunya.
+- Mohon coba setelah deploy, berurutan: (1) halaman terbuka tanpa error di console dan contoh LED+resistor masih normal; (2) contoh "Transistor NPN sebagai saklar": LED menyala, buka saklar harus mematikan LED; (3) contoh "MOSFET N sebagai saklar" dengan cara yang sama; (4) taruh PNP dan MOSFET P dari Pick Parts, putar dengan tombol R, sambungkan kabel ke ketiga pin; (5) hubungkan baterai langsung ke Basis tanpa resistor (transistor harus meledak); (6) Reset Simulasi memulihkan semuanya.
+
+**Catatan / keterbatasan**
+- Belum ada: efek Early BJT, kapasitansi sambungan (tidak ada respons frekuensi tinggi), dioda bodi MOSFET (MOSFET dengan drain lebih negatif dari source tetap bersifat simetris, bukan dioda), mode transistor Darlington, JFET, dan op-amp. Parameter (Is, beta balik, k, lambda, batas panas) adalah perkiraan umum, bukan data komponen tertentu seperti 2N3904 atau 2N7000.
+- Karena `hFE` tetap konstan, Vce jenuh pada simulasi sekitar 0,1 V atau kurang, sedikit lebih rendah dari lembar data (sekitar 0,2 V).
+- Penguat (sinyal AC pada basis) secara teori bisa disimulasikan, tetapi belum ada contohnya dan belum diuji.
+
+---
+
 ## 2026-11-27: v1.10.2, Koreksi: LED/Dioda Terbalik Tidak Lagi Meledak (Claude)
 **Masalah** (pertanyaan pemilik repo): apakah LED yang dipasang terbalik memang meledak? Di v1.10.0 LED terbalik pada tegangan lebih dari 5 V diberi pemanasan tambahan 0,5 W (suhu naik sekitar 500 °C), sehingga selalu meledak, bahkan ketika ada resistor seri.
 
