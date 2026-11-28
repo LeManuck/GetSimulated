@@ -5,7 +5,7 @@
 <title>GetSimulated - Simulator Rangkaian Elektronik</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Simulator rangkaian elektronik berbasis web interaktif dengan MNA solver dan transient simulation.">
-<link rel="stylesheet" href="assets/css/style.css?v=20261128">
+<link rel="stylesheet" href="assets/css/style.css?v=20261128-2">
 </head>
 <body>
 
@@ -198,7 +198,7 @@
           <li><b>Nama pin:</b> tekan sebuah pin untuk melihat namanya (misalnya + / − , Anoda / Katoda, atau Basis / Kolektor / Emitor).</li>
           <li><b>Menghapus:</b> pilih komponen atau kabel, lalu tekan Delete.</li>
           <li><b>Osiloskop:</b> pilih komponen untuk melihat tegangannya. Tekan Autoset agar skala menyesuaikan sinyal.</li>
-          <li><b>Transistor dan MOSFET:</b> pin 1 = Basis / Gate, pin 2 = Kolektor / Drain, pin 3 = Emitor / Source. Coba contoh &ldquo;Transistor NPN sebagai saklar&rdquo; dan &ldquo;MOSFET N sebagai saklar&rdquo;.</li>
+          <li><b>Transistor dan MOSFET:</b> tiga kaki berderet seperti aslinya. Kaki tengah = Basis / Gate, kaki atas = Kolektor / Drain, kaki bawah = Emitor / Source (putar dengan R). Coba contoh &ldquo;Transistor NPN sebagai saklar&rdquo; dan &ldquo;MOSFET N sebagai saklar&rdquo;.</li>
           <li><b>Panas dan ledakan:</b> pilih komponen untuk melihat suhunya. Korsleting, LED tanpa resistor, atau kapasitor terbalik membuatnya panas lalu meledak. Perbaiki rangkaian, lalu tekan Reset Simulasi.</li>
         </ul>
       </div>
@@ -207,9 +207,9 @@
 </div>
 
 <!-- Urutan wajib: core (data + solver) -> scope -> editor -> app (UI + boot) -->
-<script src="assets/js/core.js?v=20261128"></script>
-<script src="assets/js/scope.js?v=20261128"></script>
-<script src="assets/js/editor.js?v=20261128"></script>
-<script src="assets/js/app.js?v=20261128"></script>
+<script src="assets/js/core.js?v=20261128-2"></script>
+<script src="assets/js/scope.js?v=20261128-2"></script>
+<script src="assets/js/editor.js?v=20261128-2"></script>
+<script src="assets/js/app.js?v=20261128-2"></script>
 </body>
 </html>
